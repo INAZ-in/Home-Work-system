@@ -45,9 +45,11 @@ Done.
   Frontend (dev):        http://localhost:5173
   Backend health check:  http://localhost:4000/api/health
 
-Next: open the frontend, register an account (name + password) for yourself
-and each group-mate, go to "Админ" and search your group in the LKS lookup to
-set bmstu_group_uuid — that's what the nightly sync (and the
-"Синхронизировать сейчас" button) uses to keep the schedule live instead of
-relying only on the seeded JSON.
+Next: open the frontend and log in with the default admin account —
+name "admin", password "admin123" — then change that password right away
+(Админ → Пользователи → Сменить пароль), it's a well-known default. Create
+or register an account for each group-mate, go to "Админ" and search your
+group in the LKS lookup to set bmstu_group_uuid — that's what the nightly
+sync (and the "Синхронизировать сейчас" button) uses to keep the schedule
+live instead of relying only on the seeded JSON.
 EOF

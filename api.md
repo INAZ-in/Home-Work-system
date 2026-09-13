@@ -2,6 +2,8 @@
 
 Express-бэкенд на `backend/src`, весь API живёт под префиксом `/api`. Хранилище — Postgres, миграции в `backend/src/db/migrations`. Ниже — как всё это устроено и как этим пользоваться.
 
+Миграция `008_default_admin.sql` заводит дефолтный аккаунт `admin` / `admin123` (`is_admin = true`) — смени пароль сразу после первого входа.
+
 ## Аутентификация
 
 - Схема — Bearer JWT. Токен выдаётся при `/api/auth/register` и `/api/auth/login`, живёт 30 дней (`backend/src/services/auth.ts`), подписывается `JWT_SECRET` из `.env`.
