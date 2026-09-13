@@ -4,6 +4,7 @@ import type {
   GeometryGroup,
   HomeworkFileMeta,
   LanguageGroup,
+  PersonalPlan,
   ScheduleOccurrence,
   Semester,
   SubjectHomeworkEntry,
@@ -139,6 +140,13 @@ export const api = {
   getSubjectHomework: (subject: string) =>
     request<SubjectHomeworkEntry[]>(`/api/subjects/${encodeURIComponent(subject)}/homework`),
 
+  getPlans: (from: string, to: string) => request<PersonalPlan[]>(`/api/plans?from=${from}&to=${to}`),
+  createPlan: (date: string, text: string) =>
+    request<PersonalPlan>("/api/plans", { method: "POST", body: JSON.stringify({ date, text }) }),
+  updatePlan: (id: number, data: { text?: string; done?: boolean; date?: string }) =>
+    request<PersonalPlan>(`/api/plans/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deletePlan: (id: number) => request<void>(`/api/plans/${id}`, { method: "DELETE" }),
+
   getSemesters: () => request<Semester[]>("/api/semesters"),
   getActiveSemester: () => request<Semester | null>("/api/semesters/active"),
   createSemester: (data: { name: string; startDate: string; startWeekParity: "ch" | "zn"; bmstuGroupUuid?: string }) =>
@@ -161,6 +169,11 @@ export const api = {
     request<AdminUser>(`/api/admin/users/${userId}/subgroups`, {
       method: "PUT",
       body: JSON.stringify({ languageGroup, geometryGroup }),
+    }),
+  setUserCanCreatePlans: (userId: number, canCreatePlans: boolean) =>
+    request<AdminUser>(`/api/admin/users/${userId}/can-create-plans`, {
+      method: "PUT",
+      body: JSON.stringify({ canCreatePlans }),
     }),
   deleteUser: (userId: number) => request<void>(`/api/admin/users/${userId}`, { method: "DELETE" }),
 };

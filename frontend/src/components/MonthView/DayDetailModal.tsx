@@ -1,15 +1,17 @@
 import { useEffect } from "react";
-import type { ScheduleOccurrence } from "../../types/schedule";
+import type { PersonalPlan, ScheduleOccurrence } from "../../types/schedule";
 import { dayNameRu, formatDayMonth } from "../../utils/date";
 import { LessonCard } from "../LessonCard";
+import { PersonalPlanCard } from "../PersonalPlanCard";
 
 interface Props {
   date: string;
   occurrences: ScheduleOccurrence[];
+  plans?: PersonalPlan[];
   onClose: () => void;
 }
 
-export function DayDetailModal({ date, occurrences, onClose }: Props) {
+export function DayDetailModal({ date, occurrences, plans = [], onClose }: Props) {
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -31,6 +33,13 @@ export function DayDetailModal({ date, occurrences, onClose }: Props) {
           </button>
         </div>
         <div className="modal__body">
+          {plans.length > 0 && (
+            <div className="day-column__plans">
+              {plans.map((plan) => (
+                <PersonalPlanCard key={plan.id} plan={plan} />
+              ))}
+            </div>
+          )}
           {occurrences.length === 0 ? (
             <div className="day-column__empty">Нет пар</div>
           ) : (

@@ -3,11 +3,12 @@ import { useUser } from "./context/UserContext";
 import { useSubjectColors } from "./hooks/useSubjectColors";
 import { AdminPage } from "./pages/AdminPage";
 import { LoginPage } from "./pages/LoginPage";
+import { PlansPage } from "./pages/PlansPage";
 import { SchedulePage } from "./pages/SchedulePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { SubjectsPage } from "./pages/SubjectsPage";
 
-type Page = "schedule" | "subjects" | "admin" | "settings";
+type Page = "schedule" | "subjects" | "plans" | "admin" | "settings";
 
 export function App() {
   const { currentUser, isRestoring, logout } = useUser();
@@ -21,6 +22,7 @@ export function App() {
   const showAdmin = page === "admin" && currentUser.isAdmin;
   const showSettings = page === "settings" || profileIncomplete;
   const showSubjects = page === "subjects" && !showSettings;
+  const showPlans = page === "plans" && currentUser.canCreatePlans && !showSettings;
 
   return (
     <div className="app">
@@ -33,6 +35,11 @@ export function App() {
           <button type="button" className={page === "subjects" ? "active" : ""} onClick={() => setPage("subjects")}>
             Предметы
           </button>
+          {currentUser.canCreatePlans && (
+            <button type="button" className={page === "plans" ? "active" : ""} onClick={() => setPage("plans")}>
+              Мои планы
+            </button>
+          )}
           <button type="button" className={page === "settings" ? "active" : ""} onClick={() => setPage("settings")}>
             Настройки
           </button>
@@ -58,7 +65,17 @@ export function App() {
         </p>
       )}
       <main className="app-main">
-        {showSettings ? <SettingsPage /> : showAdmin ? <AdminPage /> : showSubjects ? <SubjectsPage /> : <SchedulePage />}
+        {showSettings ? (
+          <SettingsPage />
+        ) : showAdmin ? (
+          <AdminPage />
+        ) : showSubjects ? (
+          <SubjectsPage />
+        ) : showPlans ? (
+          <PlansPage />
+        ) : (
+          <SchedulePage />
+        )}
       </main>
     </div>
   );

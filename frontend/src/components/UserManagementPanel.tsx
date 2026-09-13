@@ -66,6 +66,12 @@ export function UserManagementPanel() {
     },
   });
 
+  const setCanCreatePlansMutation = useMutation({
+    mutationFn: ({ id, canCreatePlans }: { id: number; canCreatePlans: boolean }) =>
+      api.setUserCanCreatePlans(id, canCreatePlans),
+    onSuccess: invalidate,
+  });
+
   const handleCreate = (e: FormEvent): void => {
     e.preventDefault();
     if (name.trim() && password) createMutation.mutate();
@@ -99,18 +105,19 @@ export function UserManagementPanel() {
               <th>Зарегистрирован</th>
               <th>Роль</th>
               <th>Группы</th>
+              <th>Личные планы</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={5}>Загрузка…</td>
+                <td colSpan={6}>Загрузка…</td>
               </tr>
             )}
             {!isLoading && users.length === 0 && (
               <tr>
-                <td colSpan={5}>Пользователей пока нет.</td>
+                <td colSpan={6}>Пользователей пока нет.</td>
               </tr>
             )}
             {users.map((u) => (
@@ -126,6 +133,15 @@ export function UserManagementPanel() {
                     {u.languageGroup ? LANGUAGE_GROUP_LABELS[u.languageGroup] : "—"}
                     <br />
                     {u.geometryGroup ? GEOMETRY_GROUP_LABELS[u.geometryGroup] : "—"}
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      onClick={() => setCanCreatePlansMutation.mutate({ id: u.id, canCreatePlans: !u.canCreatePlans })}
+                      disabled={setCanCreatePlansMutation.isPending}
+                    >
+                      {u.canCreatePlans ? "Разрешены" : "Запрещены"}
+                    </button>
                   </td>
                   <td className="user-table__actions">
                     <button
@@ -161,7 +177,7 @@ export function UserManagementPanel() {
                 </tr>
                 {passwordEditId === u.id && (
                   <tr>
-                    <td colSpan={5}>
+                    <td colSpan={6}>
                       <form className="user-table__password-form" onSubmit={(e) => handleSavePassword(e, u.id)}>
                         <input
                           type="password"
@@ -184,7 +200,7 @@ export function UserManagementPanel() {
                 )}
                 {subgroupsEditId === u.id && (
                   <tr>
-                    <td colSpan={5}>
+                    <td colSpan={6}>
                       <form className="user-table__password-form" onSubmit={(e) => handleSaveSubgroups(e, u.id)}>
                         <select
                           value={editLanguageGroup}
@@ -232,6 +248,9 @@ export function UserManagementPanel() {
       {setAdminMutation.isError && <p className="form-error">{(setAdminMutation.error as Error).message}</p>}
       {setPasswordMutation.isError && <p className="form-error">{(setPasswordMutation.error as Error).message}</p>}
       {setSubgroupsMutation.isError && <p className="form-error">{(setSubgroupsMutation.error as Error).message}</p>}
+      {setCanCreatePlansMutation.isError && (
+        <p className="form-error">{(setCanCreatePlansMutation.error as Error).message}</p>
+      )}
       {deleteMutation.isError && <p className="form-error">{(deleteMutation.error as Error).message}</p>}
 
       <form className="admin-form" onSubmit={handleCreate}>

@@ -5,6 +5,7 @@ import { requireAdmin } from "./middleware/requireAdmin.js";
 import adminRouter from "./routes/admin.js";
 import authRouter from "./routes/auth.js";
 import homeworkRouter from "./routes/homework.js";
+import plansRouter from "./routes/plans.js";
 import scheduleRouter from "./routes/schedule.js";
 import semestersRouter from "./routes/semesters.js";
 import usersRouter from "./routes/users.js";
@@ -22,6 +23,7 @@ export function createApp(): Express {
   app.use("/api/users", currentUser, usersRouter);
   app.use("/api", currentUser, scheduleRouter);
   app.use("/api", currentUser, homeworkRouter);
+  app.use("/api/plans", currentUser, plansRouter);
   // GET /active inside semestersRouter stays open to any authenticated user
   // (the two-week view's ч/з badges need it) — write routes and the full
   // list gate themselves with requireAdmin individually.

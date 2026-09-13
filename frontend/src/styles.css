@@ -1221,3 +1221,104 @@ h3 {
 .hw-files__add-btn:hover {
   color: var(--today);
 }
+
+/* --- personal plans --- */
+
+.month-cell__plan-flag {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.day-column__plans {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.plan-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.plan-card--done {
+  opacity: 0.6;
+}
+
+.plan-card__done {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.plan-card__text {
+  flex: 1;
+  min-width: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  cursor: text;
+}
+
+.plan-card--done .plan-card__text {
+  text-decoration: line-through;
+}
+
+.plan-card__text-input {
+  flex: 1;
+  min-width: 0;
+  resize: vertical;
+  font-size: 13px;
+}
+
+.plan-card__delete {
+  background: none;
+  border: none;
+  padding: 0 4px;
+  color: var(--danger);
+  flex-shrink: 0;
+}
+
+/* --- plans page --- */
+
+.plans-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.plans-page__form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.plans-page__form input[type="text"] {
+  flex: 1;
+  min-width: 200px;
+}
+
+.plans-page__groups {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.plans-page__group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.plans-page__group-date {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--muted);
+}

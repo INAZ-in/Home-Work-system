@@ -51,9 +51,11 @@ router.post(
       isAdmin: boolean;
       languageGroup: string;
       geometryGroup: number;
+      canCreatePlans: boolean;
     }>(
       `INSERT INTO users (name, password_hash, is_admin, language_group, geometry_group) VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, name, is_admin AS "isAdmin", language_group AS "languageGroup", geometry_group AS "geometryGroup"`,
+       RETURNING id, name, is_admin AS "isAdmin", language_group AS "languageGroup", geometry_group AS "geometryGroup",
+                 can_create_plans AS "canCreatePlans"`,
       [name, passwordHash, isFirstUser, languageGroup, geometryGroup],
     );
     const user = inserted.rows[0];
@@ -78,9 +80,11 @@ router.post(
       isAdmin: boolean;
       languageGroup: string | null;
       geometryGroup: number | null;
+      canCreatePlans: boolean;
     }>(
       `SELECT id, name, password_hash, is_admin AS "isAdmin",
-              language_group AS "languageGroup", geometry_group AS "geometryGroup"
+              language_group AS "languageGroup", geometry_group AS "geometryGroup",
+              can_create_plans AS "canCreatePlans"
        FROM users WHERE lower(name) = lower($1)`,
       [name],
     );
@@ -103,6 +107,7 @@ router.post(
         isAdmin: user.isAdmin,
         languageGroup: user.languageGroup,
         geometryGroup: user.geometryGroup,
+        canCreatePlans: user.canCreatePlans,
       },
     });
   }),
@@ -136,7 +141,8 @@ router.put(
     const { languageGroup, geometryGroup } = parsed.data;
     const updated = await pool.query(
       `UPDATE users SET language_group = $1, geometry_group = $2 WHERE id = $3
-       RETURNING id, name, is_admin AS "isAdmin", language_group AS "languageGroup", geometry_group AS "geometryGroup"`,
+       RETURNING id, name, is_admin AS "isAdmin", language_group AS "languageGroup", geometry_group AS "geometryGroup",
+                 can_create_plans AS "canCreatePlans"`,
       [languageGroup, geometryGroup, req.user!.id],
     );
     res.json(updated.rows[0]);

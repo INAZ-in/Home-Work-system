@@ -71,6 +71,16 @@ export interface User {
   isAdmin: boolean;
   languageGroup: LanguageGroup | null;
   geometryGroup: GeometryGroup | null;
+  canCreatePlans: boolean;
+}
+
+export interface PersonalPlan {
+  id: number;
+  date: string;
+  text: string;
+  done: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AdminUser extends User {

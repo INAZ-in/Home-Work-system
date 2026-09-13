@@ -4,6 +4,8 @@ import { MonthGrid } from "../components/MonthView/MonthGrid";
 import { TwoWeekView } from "../components/WeekView/TwoWeekView";
 import { ViewToggle, type ViewMode } from "../components/ViewToggle";
 import { WeekView } from "../components/WeekView/WeekView";
+import { useUser } from "../context/UserContext";
+import { usePlans } from "../hooks/usePlans";
 import { useSchedule } from "../hooks/useSchedule";
 import {
   addDays,
@@ -26,6 +28,7 @@ function defaultViewMode(): ViewMode {
 const STEP_DAYS: Record<ViewMode, number> = { day: 1, week: 7, twoWeeks: 14, month: 0 };
 
 export function SchedulePage() {
+  const { currentUser } = useUser();
   const [viewMode, setViewMode] = useState<ViewMode>(defaultViewMode);
   const [anchorDate, setAnchorDate] = useState(todayISO());
 
@@ -39,6 +42,7 @@ export function SchedulePage() {
   }, [viewMode, anchorDate]);
 
   const { data: occurrences = [], isLoading, isFetching } = useSchedule(from, to);
+  const { data: plans = [] } = usePlans(from, to, Boolean(currentUser?.canCreatePlans));
 
   const label = useMemo(() => {
     if (viewMode === "day") return `${dayNameRu(anchorDate)}, ${formatDayMonth(anchorDate)}`;
@@ -65,16 +69,16 @@ export function SchedulePage() {
         label={label}
       />
       {viewMode === "day" && (
-        <DayView date={anchorDate} occurrences={occurrences} isLoading={isLoading || isFetching} />
+        <DayView date={anchorDate} occurrences={occurrences} plans={plans} isLoading={isLoading || isFetching} />
       )}
       {viewMode === "week" && (
-        <WeekView anchorDate={anchorDate} occurrences={occurrences} isLoading={isLoading || isFetching} />
+        <WeekView anchorDate={anchorDate} occurrences={occurrences} plans={plans} isLoading={isLoading || isFetching} />
       )}
       {viewMode === "twoWeeks" && (
-        <TwoWeekView anchorDate={anchorDate} occurrences={occurrences} isLoading={isLoading || isFetching} />
+        <TwoWeekView anchorDate={anchorDate} occurrences={occurrences} plans={plans} isLoading={isLoading || isFetching} />
       )}
       {viewMode === "month" && (
-        <MonthGrid anchorDate={anchorDate} occurrences={occurrences} isLoading={isLoading || isFetching} />
+        <MonthGrid anchorDate={anchorDate} occurrences={occurrences} plans={plans} isLoading={isLoading || isFetching} />
       )}
     </div>
   );

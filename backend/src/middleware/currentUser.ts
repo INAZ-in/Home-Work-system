@@ -9,6 +9,7 @@ export interface CurrentUser {
   isAdmin: boolean;
   languageGroup: LanguageGroup | null;
   geometryGroup: GeometryGroup | null;
+  canCreatePlans: boolean;
 }
 
 declare global {
@@ -35,7 +36,8 @@ export const currentUser = asyncHandler(async (req, res, next) => {
   }
 
   const { rows } = await pool.query<CurrentUser>(
-    `SELECT id, name, is_admin AS "isAdmin", language_group AS "languageGroup", geometry_group AS "geometryGroup"
+    `SELECT id, name, is_admin AS "isAdmin", language_group AS "languageGroup", geometry_group AS "geometryGroup",
+            can_create_plans AS "canCreatePlans"
      FROM users WHERE id = $1`,
     [userId],
   );

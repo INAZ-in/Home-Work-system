@@ -54,7 +54,8 @@ router.get(
   asyncHandler(async (_req, res) => {
     const { rows } = await pool.query(
       `SELECT id, name, is_admin AS "isAdmin", created_at AS "createdAt",
-              language_group AS "languageGroup", geometry_group AS "geometryGroup"
+              language_group AS "languageGroup", geometry_group AS "geometryGroup",
+              can_create_plans AS "canCreatePlans"
        FROM users ORDER BY name`,
     );
     res.json(rows);
@@ -176,6 +177,33 @@ router.put(
        RETURNING id, name, is_admin AS "isAdmin", created_at AS "createdAt",
                  language_group AS "languageGroup", geometry_group AS "geometryGroup"`,
       [parsed.data.languageGroup, parsed.data.geometryGroup, id],
+    );
+    if (updated.rows.length === 0) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    res.json(updated.rows[0]);
+  }),
+);
+
+const setCanCreatePlansSchema = z.object({ canCreatePlans: z.boolean() });
+
+router.put(
+  "/users/:id/can-create-plans",
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    const parsed = setCanCreatePlansSchema.safeParse(req.body);
+    if (!Number.isInteger(id) || id <= 0 || !parsed.success) {
+      res.status(400).json({ error: "Invalid request" });
+      return;
+    }
+
+    const updated = await pool.query(
+      `UPDATE users SET can_create_plans = $1 WHERE id = $2
+       RETURNING id, name, is_admin AS "isAdmin", created_at AS "createdAt",
+                 language_group AS "languageGroup", geometry_group AS "geometryGroup",
+                 can_create_plans AS "canCreatePlans"`,
+      [parsed.data.canCreatePlans, id],
     );
     if (updated.rows.length === 0) {
       res.status(404).json({ error: "User not found" });

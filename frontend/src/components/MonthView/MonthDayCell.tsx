@@ -7,12 +7,13 @@ const MAX_VISIBLE = 3;
 interface Props {
   date: string;
   occurrences: ScheduleOccurrence[];
+  hasPlans?: boolean;
   inCurrentMonth: boolean;
   isToday: boolean;
   onSelect: () => void;
 }
 
-export function MonthDayCell({ date, occurrences, inCurrentMonth, isToday, onSelect }: Props) {
+export function MonthDayCell({ date, occurrences, hasPlans = false, inCurrentMonth, isToday, onSelect }: Props) {
   const dayNum = Number(date.slice(8, 10));
   const visible = occurrences.slice(0, MAX_VISIBLE);
   const hiddenCount = occurrences.length - visible.length;
@@ -27,6 +28,7 @@ export function MonthDayCell({ date, occurrences, inCurrentMonth, isToday, onSel
       <div className="month-cell__date">
         <span>{dayNum}</span>
         {hasUndoneHomework && <span className="month-cell__flag" title="Есть невыполненное дз" />}
+        {hasPlans && <span className="month-cell__plan-flag" title="Есть личный план" />}
       </div>
       {occurrences.length > 0 && (
         <div className="month-cell__lessons">
