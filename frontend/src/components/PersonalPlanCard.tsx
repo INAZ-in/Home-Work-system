@@ -12,7 +12,13 @@ export function PersonalPlanCard({ plan }: Props) {
   const [text, setText] = useState(plan.text);
   const [editing, setEditing] = useState(false);
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["plans"] });
+  // Rendered both on the dedicated "Мои планы" page (query key "plans") and
+  // inline in the schedule views (query key "overview", see useOverview) —
+  // invalidate both so either context picks up the change.
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["plans"] });
+    queryClient.invalidateQueries({ queryKey: ["overview"] });
+  };
 
   const doneMutation = useMutation({
     mutationFn: (done: boolean) => api.updatePlan(plan.id, { done }),

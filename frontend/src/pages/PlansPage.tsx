@@ -26,6 +26,7 @@ export function PlansPage() {
     onSuccess: () => {
       setText("");
       queryClient.invalidateQueries({ queryKey: ["plans"] });
+      queryClient.invalidateQueries({ queryKey: ["overview"] });
     },
   });
 

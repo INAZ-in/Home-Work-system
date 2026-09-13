@@ -28,18 +28,18 @@ export function HomeworkEditor({ occurrence }: Props) {
 
   const commentMutation = useMutation({
     mutationFn: (value: string) => api.updateComment(occurrence.lessonTemplateId, occurrence.date, value, null),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["schedule"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["overview"] }),
   });
 
   const doneMutation = useMutation({
     mutationFn: (value: boolean) => api.updateDone(occurrence.lessonTemplateId, occurrence.date, value),
     onError: () => setDone(occurrence.done),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["schedule"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["overview"] }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: () => api.deleteHomework(occurrence.lessonTemplateId, occurrence.date),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["schedule"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["overview"] }),
   });
 
   const handleToggleDone = (): void => {
@@ -105,7 +105,7 @@ export function HomeworkEditor({ occurrence }: Props) {
         templateId={occurrence.lessonTemplateId}
         date={occurrence.date}
         files={occurrence.homework?.files ?? []}
-        onChanged={() => queryClient.invalidateQueries({ queryKey: ["schedule"] })}
+        onChanged={() => queryClient.invalidateQueries({ queryKey: ["overview"] })}
       />
       {occurrence.homework?.updatedBy && <div className="hw-editor__meta">изменил(а) {occurrence.homework.updatedBy}</div>}
       {deleteMutation.isError && <p className="form-error">{(deleteMutation.error as Error).message}</p>}

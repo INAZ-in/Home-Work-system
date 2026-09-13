@@ -39,7 +39,7 @@ export function AdminPage() {
     mutationFn: (id: number) => api.activateSemester(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["semesters"] });
-      queryClient.invalidateQueries({ queryKey: ["schedule"] });
+      queryClient.invalidateQueries({ queryKey: ["overview"] });
     },
   });
 
@@ -47,7 +47,7 @@ export function AdminPage() {
     mutationFn: () => api.syncNow(),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["sync-runs"] });
-      await queryClient.invalidateQueries({ queryKey: ["schedule"] });
+      await queryClient.invalidateQueries({ queryKey: ["overview"] });
     },
   });
 

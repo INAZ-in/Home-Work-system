@@ -33,7 +33,7 @@ export function NextOccurrenceModal({ templateId, afterDate, onClose }: Props) {
   const saveMutation = useMutation({
     mutationFn: () => api.updateComment(templateId, data!.date, comment, null),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["schedule"] });
+      queryClient.invalidateQueries({ queryKey: ["overview"] });
       onClose();
     },
   });

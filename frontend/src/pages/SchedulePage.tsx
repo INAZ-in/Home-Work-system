@@ -4,9 +4,7 @@ import { MonthGrid } from "../components/MonthView/MonthGrid";
 import { TwoWeekView } from "../components/WeekView/TwoWeekView";
 import { ViewToggle, type ViewMode } from "../components/ViewToggle";
 import { WeekView } from "../components/WeekView/WeekView";
-import { useUser } from "../context/UserContext";
-import { usePlans } from "../hooks/usePlans";
-import { useSchedule } from "../hooks/useSchedule";
+import { useOverview } from "../hooks/useOverview";
 import {
   addDays,
   dayNameRu,
@@ -28,7 +26,6 @@ function defaultViewMode(): ViewMode {
 const STEP_DAYS: Record<ViewMode, number> = { day: 1, week: 7, twoWeeks: 14, month: 0 };
 
 export function SchedulePage() {
-  const { currentUser } = useUser();
   const [viewMode, setViewMode] = useState<ViewMode>(defaultViewMode);
   const [anchorDate, setAnchorDate] = useState(todayISO());
 
@@ -41,8 +38,9 @@ export function SchedulePage() {
     return { from: dates[0], to: dates[dates.length - 1] };
   }, [viewMode, anchorDate]);
 
-  const { data: occurrences = [], isLoading, isFetching } = useSchedule(from, to);
-  const { data: plans = [] } = usePlans(from, to, Boolean(currentUser?.canCreatePlans));
+  const { data, isLoading, isFetching } = useOverview(from, to);
+  const occurrences = data?.occurrences ?? [];
+  const plans = data?.plans ?? [];
 
   const label = useMemo(() => {
     if (viewMode === "day") return `${dayNameRu(anchorDate)}, ${formatDayMonth(anchorDate)}`;
