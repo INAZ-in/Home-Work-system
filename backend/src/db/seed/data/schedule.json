@@ -1,0 +1,261 @@
+{
+  "title": "Расписание ИУ8-13/6",
+  "days": [
+    {
+      "num": 1,
+      "name": "Понедельник"
+    },
+    {
+      "num": 2,
+      "name": "Вторник"
+    },
+    {
+      "num": 3,
+      "name": "Среда"
+    },
+    {
+      "num": 4,
+      "name": "Четверг"
+    },
+    {
+      "num": 5,
+      "name": "Пятница"
+    },
+    {
+      "num": 6,
+      "name": "Суббота"
+    }
+  ],
+  "pairs": [
+    {
+      "num": 1,
+      "start": "08:30",
+      "end": "10:00"
+    },
+    {
+      "num": 2,
+      "start": "10:10",
+      "end": "11:40"
+    },
+    {
+      "num": 3,
+      "start": "12:15",
+      "end": "13:45"
+    },
+    {
+      "num": 4,
+      "start": "14:05",
+      "end": "15:35"
+    },
+    {
+      "num": 5,
+      "start": "15:55",
+      "end": "17:25"
+    },
+    {
+      "num": 6,
+      "start": "17:35",
+      "end": "19:05"
+    }
+  ],
+  "lessons": [
+    {
+      "day": 1,
+      "pair": 1,
+      "week": "both",
+      "name": "Алгоритмизация и программирование",
+      "type": "lecture",
+      "teacher": "Быков А.Ю.",
+      "room": "301х"
+    },
+    {
+      "day": 1,
+      "pair": 2,
+      "week": "both",
+      "name": "Математический анализ",
+      "type": "lecture",
+      "teacher": "Ахметова Ф.Х.",
+      "room": "301х"
+    },
+    {
+      "day": 1,
+      "pair": 3,
+      "week": "both",
+      "name": "Физическая культура",
+      "type": "seminar",
+      "teacher": "",
+      "room": "каф. ФВ"
+    },
+    {
+      "day": 2,
+      "pair": 1,
+      "week": "ch",
+      "name": "Алгоритмизация и программирование",
+      "type": "lecture",
+      "teacher": "Быков А.Ю.",
+      "room": "513ю"
+    },
+    {
+      "day": 2,
+      "pair": 2,
+      "week": "both",
+      "name": "Теоретическая информатика",
+      "type": "lecture",
+      "teacher": "Зуев Ю.А.",
+      "room": "513ю"
+    },
+    {
+      "day": 2,
+      "pair": 3,
+      "week": "zn",
+      "name": "История",
+      "type": "lecture",
+      "teacher": "Божич А.С.",
+      "room": "513ю"
+    },
+    {
+      "day": 2,
+      "pair": 3,
+      "week": "ch",
+      "name": "Введение в специальность",
+      "type": "lecture",
+      "teacher": "",
+      "room": "513ю"
+    },
+    {
+      "day": 2,
+      "pair": 4,
+      "week": "zn",
+      "name": "Алгоритмизация и программирование",
+      "type": "lab",
+      "teacher": "Соборова В.В.",
+      "room": "253л"
+    },
+    {
+      "day": 3,
+      "pair": 2,
+      "week": "both",
+      "name": "Самостоятельная работа",
+      "type": "generated",
+      "teacher": "",
+      "room": ""
+    },
+    {
+      "day": 4,
+      "pair": 1,
+      "week": "both",
+      "name": "Начертательная геометрия",
+      "type": "lecture",
+      "teacher": "Андреев-Твердов А.И.",
+      "room": "220л"
+    },
+    {
+      "day": 4,
+      "pair": 2,
+      "week": "both",
+      "name": "Аналитическая геометрия",
+      "type": "lecture",
+      "teacher": "Нараленкова И.И.",
+      "room": "944л"
+    },
+    {
+      "day": 4,
+      "pair": 3,
+      "week": "ch",
+      "name": "УТП РЛ6 + ИУ8-19/6",
+      "type": "",
+      "teacher": "",
+      "room": ""
+    },
+    {
+      "day": 4,
+      "pair": 4,
+      "week": "ch",
+      "name": "УТП РЛ6 + ИУ8-19/6",
+      "type": "",
+      "teacher": "",
+      "room": ""
+    },
+    {
+      "day": 5,
+      "pair": 2,
+      "week": "both",
+      "name": "ФКиС 09:25 Измайлово",
+      "type": "",
+      "teacher": "",
+      "room": ""
+    },
+    {
+      "day": 5,
+      "pair": 3,
+      "week": "both",
+      "name": "Теоретическая информатика",
+      "type": "seminar",
+      "teacher": "Зайцева А.В.",
+      "room": "145л"
+    },
+    {
+      "day": 5,
+      "pair": 4,
+      "week": "both",
+      "name": "Алгоритмизация и программирование",
+      "type": "seminar",
+      "teacher": "Соборова В.В.",
+      "room": "145л"
+    },
+    {
+      "day": 5,
+      "pair": 5,
+      "week": "both",
+      "name": "Начертательная геометрия",
+      "type": "seminar",
+      "teacher": "Белобородова Т.Л., Минеев А.Б.",
+      "room": "1113л, 1111л"
+    },
+    {
+      "day": 5,
+      "pair": 6,
+      "week": "both",
+      "name": "Иностранный язык",
+      "type": "seminar",
+      "teacher": "",
+      "room": "каф. Л2"
+    },
+    {
+      "day": 6,
+      "pair": 1,
+      "week": "zn",
+      "name": "Математический анализ",
+      "type": "seminar",
+      "teacher": "Скосарева Е.П.",
+      "room": "521к"
+    },
+    {
+      "day": 6,
+      "pair": 2,
+      "week": "both",
+      "name": "Аналитическая геометрия",
+      "type": "seminar",
+      "teacher": "Скосарева Е.П.",
+      "room": "521к"
+    },
+    {
+      "day": 6,
+      "pair": 3,
+      "week": "both",
+      "name": "Математический анализ",
+      "type": "seminar",
+      "teacher": "Скосарева Е.П.",
+      "room": "540к"
+    },
+    {
+      "day": 6,
+      "pair": 4,
+      "week": "both",
+      "name": "История",
+      "type": "seminar",
+      "teacher": "Аляева Л.А.",
+      "room": "540к"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+# VPS deploy: `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build`
+# No bind mounts, no host port on postgres, frontend nginx listens on 80.
+services:
+  backend:
+    build:
+      target: runtime
+    restart: always
+
+  frontend:
+    build:
+      target: runtime
+    restart: always
+    ports:
+      - "80:80"
+
+  postgres:
+    restart: always

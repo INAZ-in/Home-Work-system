@@ -1,0 +1,328 @@
+/**
+ * Live schedule sync against the public ЛКС (lks.bmstu.ru) API. This is a
+ * TypeScript port of the fetch/parse logic in `bmstu_schedule.py` at the
+ * repo root (no auth required — same endpoints it uses):
+ *   GET {BASE}/structure                     -- faculty/department/group tree
+ *   GET {BASE}/schedules/groups/{uuid}/public -- one group's schedule
+ */
+import { pool } from "../db/pool.js";
+import { getActiveSemester } from "./scheduleResolver.js";
+
+const BASE = "https://lks.bmstu.ru/lks-back/api/v1";
+
+type WeekCode = "both" | "ch" | "zn";
+type LessonType = "lecture" | "seminar" | "lab" | "generated" | "";
+const KNOWN_LESSON_TYPES = new Set<LessonType>(["lecture", "seminar", "lab", "generated", ""]);
+
+async function fetchJson<T>(url: string): Promise<T> {
+  const res = await fetch(url, { headers: { "User-Agent": "HomeWorke-sync/1.0" } });
+  if (!res.ok) {
+    throw new Error(`LKS request failed: ${res.status} ${res.statusText} (${url})`);
+  }
+  const body = (await res.json()) as { data: T };
+  return body.data;
+}
+
+// --- group lookup (used once, from the admin UI, to fill in bmstu_group_uuid) ---
+
+interface StructureNode {
+  abbr?: string;
+  name?: string;
+  uuid?: string;
+  children?: StructureNode[];
+}
+
+export interface BmstuGroupMatch {
+  name: string;
+  uuid: string;
+  path: string;
+}
+
+function flattenGroups(node: StructureNode, path: string[], out: BmstuGroupMatch[]): void {
+  const children = node.children ?? [];
+  const label = node.abbr || node.name || "";
+  const newPath = label ? [...path, label] : path;
+
+  if (node.uuid && children.length === 0) {
+    out.push({ name: node.abbr || node.name || "", uuid: node.uuid, path: newPath.join(" / ") });
+    return;
+  }
+  for (const child of children) flattenGroups(child, newPath, out);
+}
+
+export async function findBmstuGroups(query: string): Promise<BmstuGroupMatch[]> {
+  const structure = await fetchJson<StructureNode>(`${BASE}/structure`);
+  const all: BmstuGroupMatch[] = [];
+  flattenGroups(structure, [], all);
+  const q = query.trim().toLowerCase();
+  return all.filter((g) => g.name && g.name.toLowerCase().includes(q));
+}
+
+// --- schedule fetch + normalization ---
+
+interface RawTeacher {
+  lastName?: string;
+  firstName?: string;
+  middleName?: string;
+}
+
+interface RawAudience {
+  name?: string;
+}
+
+interface RawLesson {
+  day: number;
+  time: number;
+  startTime?: string;
+  endTime?: string;
+  week?: string | null;
+  discipline?: { shortName?: string; fullName?: string; abbr?: string; actType?: string };
+  teachers?: RawTeacher[];
+  audiences?: RawAudience[];
+}
+
+interface GroupScheduleResponse {
+  title?: string;
+  schedule: RawLesson[];
+}
+
+async function fetchGroupSchedule(groupUuid: string): Promise<GroupScheduleResponse> {
+  return fetchJson<GroupScheduleResponse>(`${BASE}/schedules/groups/${groupUuid}/public`);
+}
+
+interface NormalizedLesson {
+  day: number;
+  pair: number;
+  week: WeekCode;
+  subject: string;
+  type: LessonType;
+  teacher: string;
+  room: string;
+  startTime?: string;
+  endTime?: string;
+}
+
+function normalizeLessonType(raw: string | undefined): LessonType {
+  const value = (raw ?? "") as LessonType;
+  if (KNOWN_LESSON_TYPES.has(value)) return value;
+  console.warn(`[bmstuSync] Unknown lesson type "${raw}" from LKS API, storing as empty string`);
+  return "";
+}
+
+function normalizeWeek(raw: string | null | undefined): WeekCode {
+  if (raw === null || raw === undefined || raw === "all") return "both";
+  if (raw === "ch" || raw === "zn") return raw;
+  console.warn(`[bmstuSync] Unknown week code "${raw}" from LKS API, treating as "both"`);
+  return "both";
+}
+
+function normalizeLesson(raw: RawLesson): NormalizedLesson {
+  const disc = raw.discipline ?? {};
+  const subject = disc.shortName || disc.fullName || disc.abbr || "?";
+  const teachers = raw.teachers ?? [];
+  const teacher = teachers
+    .map((t) => `${t.lastName ?? ""} ${(t.firstName ?? "").slice(0, 1)}.${(t.middleName ?? "").slice(0, 1)}.`)
+    .join(", ");
+  const room = (raw.audiences ?? [])
+    .map((a) => a.name)
+    .filter((n): n is string => Boolean(n))
+    .join(", ");
+
+  return {
+    day: raw.day,
+    pair: raw.time,
+    week: normalizeWeek(raw.week),
+    subject,
+    type: normalizeLessonType(disc.actType),
+    teacher,
+    room,
+    startTime: raw.startTime,
+    endTime: raw.endTime,
+  };
+}
+
+function naturalKey(l: { day: number; pair: number; week: string; subject: string }): string {
+  return `${l.day}|${l.pair}|${l.week}|${l.subject}`;
+}
+
+// --- diff + apply ---
+
+export interface SyncChange {
+  type: "added" | "updated" | "deactivated";
+  day: number;
+  pair: number;
+  parity: string;
+  subject: string;
+  field?: string;
+  old?: string;
+  new?: string;
+}
+
+export interface SyncResult {
+  status: "ok" | "error";
+  addedCount: number;
+  updatedCount: number;
+  deactivatedCount: number;
+  details: SyncChange[];
+  error?: string;
+}
+
+interface DbTemplateRow {
+  id: number;
+  day_of_week: number;
+  pair_num: number;
+  week_parity: string;
+  subject_name: string;
+  lesson_type: string;
+  teacher: string;
+  room: string;
+}
+
+export async function runScheduleSync(): Promise<SyncResult> {
+  const semester = await getActiveSemester();
+  if (!semester) {
+    console.warn("[bmstuSync] No active semester configured — skipping sync.");
+    return {
+      status: "error",
+      addedCount: 0,
+      updatedCount: 0,
+      deactivatedCount: 0,
+      details: [],
+      error: "No active semester configured",
+    };
+  }
+
+  const client = await pool.connect();
+  try {
+    if (!semester.bmstuGroupUuid) {
+      throw new Error("Active semester has no bmstu_group_uuid configured");
+    }
+
+    const remote = await fetchGroupSchedule(semester.bmstuGroupUuid);
+    const liveLessons = (remote.schedule ?? [])
+      .filter((l) => l.day >= 1 && l.day <= 6)
+      .map(normalizeLesson);
+
+    const pairTimes = new Map<number, { start: string; end: string }>();
+    for (const l of liveLessons) {
+      if (l.startTime && l.endTime && !pairTimes.has(l.pair)) {
+        pairTimes.set(l.pair, { start: l.startTime, end: l.endTime });
+      }
+    }
+
+    const dbTemplatesRes = await client.query<DbTemplateRow>(
+      `SELECT id, day_of_week, pair_num, week_parity, subject_name, lesson_type, teacher, room
+       FROM lesson_templates
+       WHERE semester_id = $1 AND is_active`,
+      [semester.id],
+    );
+
+    const dbByKey = new Map(
+      dbTemplatesRes.rows.map((r) => [
+        naturalKey({ day: r.day_of_week, pair: r.pair_num, week: r.week_parity, subject: r.subject_name }),
+        r,
+      ]),
+    );
+    const liveByKey = new Map(liveLessons.map((l) => [naturalKey(l), l]));
+
+    const details: SyncChange[] = [];
+    let addedCount = 0;
+    let updatedCount = 0;
+    let deactivatedCount = 0;
+
+    await client.query("BEGIN");
+
+    for (const [pairNum, times] of pairTimes) {
+      await client.query(
+        `INSERT INTO pairs (pair_num, start_time, end_time)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (pair_num) DO UPDATE SET start_time = EXCLUDED.start_time, end_time = EXCLUDED.end_time`,
+        [pairNum, times.start, times.end],
+      );
+    }
+
+    for (const [key, live] of liveByKey) {
+      const existing = dbByKey.get(key);
+      if (!existing) {
+        await client.query(
+          `INSERT INTO lesson_templates
+             (semester_id, day_of_week, pair_num, week_parity, subject_name, lesson_type, teacher, room, is_active)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
+           ON CONFLICT (semester_id, day_of_week, pair_num, week_parity, subject_name)
+           DO UPDATE SET lesson_type = EXCLUDED.lesson_type, teacher = EXCLUDED.teacher,
+                          room = EXCLUDED.room, is_active = true`,
+          [semester.id, live.day, live.pair, live.week, live.subject, live.type, live.teacher, live.room],
+        );
+        addedCount++;
+        details.push({ type: "added", day: live.day, pair: live.pair, parity: live.week, subject: live.subject });
+        continue;
+      }
+
+      const changedFields: { field: string; old: string; new: string }[] = [];
+      if (existing.lesson_type !== live.type) changedFields.push({ field: "type", old: existing.lesson_type, new: live.type });
+      if (existing.teacher !== live.teacher) changedFields.push({ field: "teacher", old: existing.teacher, new: live.teacher });
+      if (existing.room !== live.room) changedFields.push({ field: "room", old: existing.room, new: live.room });
+
+      if (changedFields.length > 0) {
+        await client.query(`UPDATE lesson_templates SET lesson_type = $1, teacher = $2, room = $3 WHERE id = $4`, [
+          live.type,
+          live.teacher,
+          live.room,
+          existing.id,
+        ]);
+        updatedCount++;
+        for (const f of changedFields) {
+          details.push({
+            type: "updated",
+            day: live.day,
+            pair: live.pair,
+            parity: live.week,
+            subject: live.subject,
+            field: f.field,
+            old: f.old,
+            new: f.new,
+          });
+        }
+      }
+    }
+
+    for (const [key, existing] of dbByKey) {
+      if (!liveByKey.has(key)) {
+        await client.query(`UPDATE lesson_templates SET is_active = false WHERE id = $1`, [existing.id]);
+        deactivatedCount++;
+        details.push({
+          type: "deactivated",
+          day: existing.day_of_week,
+          pair: existing.pair_num,
+          parity: existing.week_parity,
+          subject: existing.subject_name,
+        });
+      }
+    }
+
+    await client.query(
+      `INSERT INTO schedule_sync_runs (semester_id, status, added_count, updated_count, deactivated_count, details)
+       VALUES ($1, 'ok', $2, $3, $4, $5)`,
+      [semester.id, addedCount, updatedCount, deactivatedCount, JSON.stringify(details)],
+    );
+
+    await client.query("COMMIT");
+
+    return { status: "ok", addedCount, updatedCount, deactivatedCount, details };
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => {});
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[bmstuSync] Sync failed:", message);
+    try {
+      await client.query(`INSERT INTO schedule_sync_runs (semester_id, status, error) VALUES ($1, 'error', $2)`, [
+        semester.id,
+        message,
+      ]);
+    } catch (logErr) {
+      console.error("[bmstuSync] Failed to log sync error:", logErr);
+    }
+    return { status: "error", addedCount: 0, updatedCount: 0, deactivatedCount: 0, details: [], error: message };
+  } finally {
+    client.release();
+  }
+}
