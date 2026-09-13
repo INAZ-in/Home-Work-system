@@ -61,6 +61,34 @@ router.post(
   }),
 );
 
+const setGroupSchema = z.object({ bmstuGroupUuid: z.string().trim().min(1) });
+
+// Lets an admin (re)assign the LKS group a semester syncs against — needed
+// once a semester already exists (created without one, or the wrong one),
+// since the creation form is otherwise the only place this gets set.
+router.put(
+  "/:id/bmstu-group",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    const parsed = setGroupSchema.safeParse(req.body);
+    if (!Number.isInteger(id) || id <= 0 || !parsed.success) {
+      res.status(400).json({ error: "Invalid request" });
+      return;
+    }
+
+    const { rows } = await pool.query(
+      `UPDATE semesters SET bmstu_group_uuid = $1 WHERE id = $2 RETURNING ${SEMESTER_COLUMNS}`,
+      [parsed.data.bmstuGroupUuid, id],
+    );
+    if (rows.length === 0) {
+      res.status(404).json({ error: "Semester not found" });
+      return;
+    }
+    res.json(rows[0]);
+  }),
+);
+
 router.put(
   "/:id/activate",
   requireAdmin,

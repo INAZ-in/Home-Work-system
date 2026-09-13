@@ -814,6 +814,12 @@ h3 {
   gap: 6px;
 }
 
+.semester-list__row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .semester-list__item {
   display: flex;
   align-items: center;
@@ -829,9 +835,20 @@ h3 {
   outline: 1px solid var(--success);
 }
 
+.semester-list__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 .semester-list__uuid {
   color: var(--muted);
   font-size: 11.5px;
+}
+
+.semester-list__uuid--missing {
+  color: var(--danger);
 }
 
 .semester-list__badge {

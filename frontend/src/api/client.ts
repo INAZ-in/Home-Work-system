@@ -152,6 +152,8 @@ export const api = {
   createSemester: (data: { name: string; startDate: string; startWeekParity: "ch" | "zn"; bmstuGroupUuid?: string }) =>
     request<Semester>("/api/semesters", { method: "POST", body: JSON.stringify(data) }),
   activateSemester: (id: number) => request(`/api/semesters/${id}/activate`, { method: "PUT" }),
+  setSemesterGroup: (id: number, bmstuGroupUuid: string) =>
+    request<Semester>(`/api/semesters/${id}/bmstu-group`, { method: "PUT", body: JSON.stringify({ bmstuGroupUuid }) }),
 
   getSyncRuns: () => request<SyncRun[]>("/api/admin/sync-runs"),
   syncNow: () => request<{ status: string }>("/api/admin/sync-now", { method: "POST" }),

@@ -17,6 +17,12 @@ export function AdminPage() {
   const [groupUuid, setGroupUuid] = useState("");
   const [searchError, setSearchError] = useState<string | null>(null);
 
+  const [groupEditId, setGroupEditId] = useState<number | null>(null);
+  const [groupEditQuery, setGroupEditQuery] = useState("");
+  const [groupEditMatches, setGroupEditMatches] = useState<BmstuGroupMatch[]>([]);
+  const [groupEditUuid, setGroupEditUuid] = useState("");
+  const [groupEditError, setGroupEditError] = useState<string | null>(null);
+
   const createMutation = useMutation({
     mutationFn: () => api.createSemester({ name, startDate, startWeekParity, bmstuGroupUuid: groupUuid || undefined }),
     onSuccess: () => {
@@ -45,6 +51,17 @@ export function AdminPage() {
     },
   });
 
+  const setGroupMutation = useMutation({
+    mutationFn: ({ id, uuid }: { id: number; uuid: string }) => api.setSemesterGroup(id, uuid),
+    onSuccess: () => {
+      setGroupEditId(null);
+      setGroupEditQuery("");
+      setGroupEditMatches([]);
+      setGroupEditUuid("");
+      queryClient.invalidateQueries({ queryKey: ["semesters"] });
+    },
+  });
+
   const handleSearchGroup = async (): Promise<void> => {
     setSearchError(null);
     try {
@@ -52,6 +69,16 @@ export function AdminPage() {
       setGroupMatches(matches);
     } catch (err) {
       setSearchError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const handleSearchGroupEdit = async (): Promise<void> => {
+    setGroupEditError(null);
+    try {
+      const matches = await api.findBmstuGroups(groupEditQuery);
+      setGroupEditMatches(matches);
+    } catch (err) {
+      setGroupEditError(err instanceof Error ? err.message : String(err));
     }
   };
 
@@ -66,21 +93,82 @@ export function AdminPage() {
         <h2>Семестры</h2>
         <ul className="semester-list">
           {semesters.map((s) => (
-            <li key={s.id} className={`semester-list__item${s.isActive ? " semester-list__item--active" : ""}`}>
-              <div>
-                <strong>{s.name}</strong>
-                <span>
-                  {" "}
-                  — начало {s.startDate} ({s.startWeekParity === "ch" ? "числитель" : "знаменатель"})
-                </span>
-                {s.bmstuGroupUuid && <span className="semester-list__uuid"> · группа {s.bmstuGroupUuid.slice(0, 8)}…</span>}
+            <li key={s.id} className="semester-list__row">
+              <div className={`semester-list__item${s.isActive ? " semester-list__item--active" : ""}`}>
+                <div>
+                  <strong>{s.name}</strong>
+                  <span>
+                    {" "}
+                    — начало {s.startDate} ({s.startWeekParity === "ch" ? "числитель" : "знаменатель"})
+                  </span>
+                  {s.bmstuGroupUuid ? (
+                    <span className="semester-list__uuid"> · группа {s.bmstuGroupUuid.slice(0, 8)}…</span>
+                  ) : (
+                    <span className="semester-list__uuid semester-list__uuid--missing"> · группа ЛКС не задана</span>
+                  )}
+                </div>
+                <div className="semester-list__actions">
+                  {s.isActive && <span className="semester-list__badge">активен</span>}
+                  {!s.isActive && (
+                    <button type="button" onClick={() => activateMutation.mutate(s.id)}>
+                      Сделать активным
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (groupEditId === s.id) {
+                        setGroupEditId(null);
+                      } else {
+                        setGroupEditId(s.id);
+                        setGroupEditQuery("");
+                        setGroupEditMatches([]);
+                        setGroupEditUuid(s.bmstuGroupUuid ?? "");
+                        setGroupEditError(null);
+                      }
+                    }}
+                  >
+                    {s.bmstuGroupUuid ? "Изменить группу" : "Указать группу"}
+                  </button>
+                </div>
               </div>
-              {s.isActive ? (
-                <span className="semester-list__badge">активен</span>
-              ) : (
-                <button type="button" onClick={() => activateMutation.mutate(s.id)}>
-                  Сделать активным
-                </button>
+              {groupEditId === s.id && (
+                <div className="admin-form__group-search">
+                  <span className="admin-form__label">Группа в ЛКС (поиск)</span>
+                  <div className="admin-form__group-search-row">
+                    <input
+                      value={groupEditQuery}
+                      onChange={(e) => setGroupEditQuery(e.target.value)}
+                      placeholder="напр. ИУ8-13"
+                    />
+                    <button type="button" onClick={handleSearchGroupEdit}>
+                      Найти
+                    </button>
+                  </div>
+                  {groupEditError && <p className="form-error">{groupEditError}</p>}
+                  {groupEditMatches.length > 0 && (
+                    <ul className="admin-form__group-matches">
+                      {groupEditMatches.map((m) => (
+                        <li key={m.uuid}>
+                          <button type="button" onClick={() => setGroupEditUuid(m.uuid)}>
+                            {m.name} <span className="admin-form__group-path">{m.path}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {groupEditUuid && <p className="admin-form__selected-uuid">Выбрано: {groupEditUuid}</p>}
+                  {setGroupMutation.isError && (
+                    <p className="form-error">{(setGroupMutation.error as Error).message}</p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => groupEditUuid && setGroupMutation.mutate({ id: s.id, uuid: groupEditUuid })}
+                    disabled={!groupEditUuid || setGroupMutation.isPending}
+                  >
+                    Сохранить группу
+                  </button>
+                </div>
               )}
             </li>
           ))}
