@@ -37,6 +37,15 @@ export interface SubjectHomeworkEntry {
   files: HomeworkFileMeta[];
 }
 
+export interface PersonalPlan {
+  id: number;
+  date: string;
+  text: string;
+  done: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ScheduleOccurrence {
   date: string;
   lessonTemplateId: number;

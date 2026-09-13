@@ -101,6 +101,12 @@ export const api = {
 
   getSchedule: (from: string, to: string) => request<ScheduleOccurrence[]>(`/api/schedule?from=${from}&to=${to}`),
 
+  /** Schedule (with homework) + personal plans for a date range in one call. `includeFiles: false` omits homework.files for a lighter payload. */
+  getOverview: (from: string, to: string, includeFiles = true) =>
+    request<{ occurrences: ScheduleOccurrence[]; plans: PersonalPlan[] }>(
+      `/api/overview?from=${from}&to=${to}&files=${includeFiles}`,
+    ),
+
   getNextOccurrence: (templateId: number, after: string) =>
     request<ScheduleOccurrence>(`/api/occurrences/${templateId}/next?after=${after}`),
 

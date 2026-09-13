@@ -29,7 +29,7 @@ Express-бэкенд на `backend/src`, весь API живёт под преф
 |---|---|---|
 | `/api/auth` | `routes/auth.ts` | `register`/`login` — публично; всё остальное через `currentUser` |
 | `/api/users` | `routes/users.ts` | любой авторизованный |
-| `/api` | `routes/schedule.ts`, `routes/homework.ts` | любой авторизованный |
+| `/api` | `routes/schedule.ts`, `routes/homework.ts`, `routes/overview.ts` | любой авторизованный |
 | `/api/plans` | `routes/plans.ts` | любой авторизованный + свой флаг `canCreatePlans` |
 | `/api/semesters` | `routes/semesters.ts` | `GET /active` — любой авторизованный; всё остальное — админ |
 | `/api/admin` | `routes/admin.ts` | только админ (`requireAdmin` на весь роутер) |
@@ -88,6 +88,18 @@ Express-бэкенд на `backend/src`, весь API живёт под преф
   subgroupLabel: string | null; // "немецкий" / "группа 2" / null
 }
 ```
+
+## `/api/overview` — сводка за диапазон дат
+
+Расписание + дз + личные планы **в одном ответе**, чтобы не дёргать `/api/schedule` и `/api/plans` отдельно и не склеивать их на клиенте.
+
+| Метод | Путь | Query | Описание |
+|---|---|---|---|
+| GET | `/overview` | `from`, `to` (обязательны, YYYY-MM-DD), `files` (`true`\|`false`, по умолчанию `true`) | `{ occurrences: ScheduleOccurrence[], plans: PersonalPlan[] }` за диапазон дат. |
+
+- `occurrences` — то же самое, что отдаёт `GET /api/schedule` (с учётом подгруппы). При `files=false` у каждого `homework.files` будет `[]` — сама запись дз никуда не пропадает, просто без списка приложенных файлов (легче ответ, если вложения не нужны).
+- `plans` — то же самое, что отдаёт `GET /api/plans` за тот же диапазон. Если у пользователя выключен `canCreatePlans`, здесь просто `[]` — эта часть не валит весь запрос `403`-кой, в отличие от прямого обращения к `/api/plans`.
+- `from > to` → `400`.
 
 ## `/api/occurrences/:templateId/:date/...` — дз на конкретное занятие
 

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../db/pool.js";
+import type { PersonalPlan } from "../types/schedule.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 const router = Router();
@@ -20,16 +21,7 @@ router.use((req, res, next) => {
 const dateParam = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const idParam = z.coerce.number().int().positive();
 
-interface PlanRow {
-  id: number;
-  date: string;
-  text: string;
-  done: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-const PLAN_COLUMNS = `id, plan_date::text AS date, text, done, created_at AS "createdAt", updated_at AS "updatedAt"`;
+export const PLAN_COLUMNS = `id, plan_date::text AS date, text, done, created_at AS "createdAt", updated_at AS "updatedAt"`;
 
 const listQuerySchema = z.object({ from: dateParam, to: dateParam });
 
@@ -41,7 +33,7 @@ router.get(
       res.status(400).json({ error: "Invalid request" });
       return;
     }
-    const { rows } = await pool.query<PlanRow>(
+    const { rows } = await pool.query<PersonalPlan>(
       `SELECT ${PLAN_COLUMNS} FROM personal_plans
        WHERE user_id = $1 AND plan_date BETWEEN $2 AND $3
        ORDER BY plan_date, id`,
@@ -61,7 +53,7 @@ router.post(
       res.status(400).json({ error: parsed.error.flatten() });
       return;
     }
-    const inserted = await pool.query<PlanRow>(
+    const inserted = await pool.query<PersonalPlan>(
       `INSERT INTO personal_plans (user_id, plan_date, text) VALUES ($1, $2, $3)
        RETURNING ${PLAN_COLUMNS}`,
       [req.user!.id, parsed.data.date, parsed.data.text],
@@ -96,7 +88,7 @@ router.put(
       return;
     }
 
-    const updated = await pool.query<PlanRow>(
+    const updated = await pool.query<PersonalPlan>(
       `UPDATE personal_plans SET text = $1, done = $2, plan_date = $3, updated_at = now()
        WHERE id = $4 AND user_id = $5
        RETURNING ${PLAN_COLUMNS}`,
