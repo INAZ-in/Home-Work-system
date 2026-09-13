@@ -53,7 +53,8 @@ router.post(
       geometryGroup: number;
       canCreatePlans: boolean;
     }>(
-      `INSERT INTO users (name, password_hash, is_admin, language_group, geometry_group) VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO users (name, password_hash, is_admin, language_group, geometry_group, last_login_at)
+       VALUES ($1, $2, $3, $4, $5, now())
        RETURNING id, name, is_admin AS "isAdmin", language_group AS "languageGroup", geometry_group AS "geometryGroup",
                  can_create_plans AS "canCreatePlans"`,
       [name, passwordHash, isFirstUser, languageGroup, geometryGroup],
@@ -98,6 +99,8 @@ router.post(
       res.status(401).json({ error: "Неверное имя или пароль" });
       return;
     }
+
+    await pool.query("UPDATE users SET last_login_at = now() WHERE id = $1", [user.id]);
 
     res.json({
       token: signToken(user.id),

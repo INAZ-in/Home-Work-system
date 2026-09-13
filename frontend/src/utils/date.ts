@@ -57,6 +57,14 @@ export function formatDayMonth(iso: string): string {
   return `${date.getDate()} ${MONTH_NAMES_RU[date.getMonth()].toLowerCase()}`;
 }
 
+/** "13 сентября, 22:04" — day+month plus time, for timestamps where recency matters (e.g. last login) and a bare date would hide useful info. */
+export function formatDateTime(isoDateTime: string): string {
+  const date = new Date(isoDateTime);
+  const day = `${date.getDate()} ${MONTH_NAMES_RU[date.getMonth()].toLowerCase()}`;
+  const time = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  return `${day}, ${time}`;
+}
+
 export function monthLabelRu(iso: string): string {
   const date = parseISODate(iso);
   return `${MONTH_NAMES_RU[date.getMonth()]} ${date.getFullYear()}`;

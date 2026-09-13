@@ -55,7 +55,7 @@ router.get(
     const { rows } = await pool.query(
       `SELECT id, name, is_admin AS "isAdmin", created_at AS "createdAt",
               language_group AS "languageGroup", geometry_group AS "geometryGroup",
-              can_create_plans AS "canCreatePlans"
+              can_create_plans AS "canCreatePlans", last_login_at AS "lastLoginAt"
        FROM users ORDER BY name`,
     );
     res.json(rows);

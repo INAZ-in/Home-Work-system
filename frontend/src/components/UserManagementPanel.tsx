@@ -8,7 +8,7 @@ import {
   type GeometryGroup,
   type LanguageGroup,
 } from "../types/schedule";
-import { formatDayMonth } from "../utils/date";
+import { formatDateTime, formatDayMonth } from "../utils/date";
 
 export function UserManagementPanel() {
   const queryClient = useQueryClient();
@@ -103,6 +103,7 @@ export function UserManagementPanel() {
             <tr>
               <th>Имя</th>
               <th>Зарегистрирован</th>
+              <th>Последний вход</th>
               <th>Роль</th>
               <th>Группы</th>
               <th>Личные планы</th>
@@ -112,12 +113,12 @@ export function UserManagementPanel() {
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={6}>Загрузка…</td>
+                <td colSpan={7}>Загрузка…</td>
               </tr>
             )}
             {!isLoading && users.length === 0 && (
               <tr>
-                <td colSpan={6}>Пользователей пока нет.</td>
+                <td colSpan={7}>Пользователей пока нет.</td>
               </tr>
             )}
             {users.map((u) => (
@@ -128,6 +129,7 @@ export function UserManagementPanel() {
                     {u.id === currentUser?.id && <span className="user-admin-list__you"> (вы)</span>}
                   </td>
                   <td>{formatDayMonth(u.createdAt.slice(0, 10))}</td>
+                  <td>{u.lastLoginAt ? formatDateTime(u.lastLoginAt) : "—"}</td>
                   <td>{u.isAdmin && <span className="app-header__admin-badge">админ</span>}</td>
                   <td>
                     {u.languageGroup ? LANGUAGE_GROUP_LABELS[u.languageGroup] : "—"}
@@ -177,7 +179,7 @@ export function UserManagementPanel() {
                 </tr>
                 {passwordEditId === u.id && (
                   <tr>
-                    <td colSpan={6}>
+                    <td colSpan={7}>
                       <form className="user-table__password-form" onSubmit={(e) => handleSavePassword(e, u.id)}>
                         <input
                           type="password"
@@ -200,7 +202,7 @@ export function UserManagementPanel() {
                 )}
                 {subgroupsEditId === u.id && (
                   <tr>
-                    <td colSpan={6}>
+                    <td colSpan={7}>
                       <form className="user-table__password-form" onSubmit={(e) => handleSaveSubgroups(e, u.id)}>
                         <select
                           value={editLanguageGroup}

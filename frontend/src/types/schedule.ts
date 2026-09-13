@@ -85,6 +85,7 @@ export interface PersonalPlan {
 
 export interface AdminUser extends User {
   createdAt: string;
+  lastLoginAt: string | null;
 }
 
 export interface Semester {
