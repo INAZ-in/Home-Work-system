@@ -4,12 +4,37 @@ export interface PairInfo {
   end: string;
 }
 
+export interface HomeworkFileMeta {
+  id: number;
+  filename: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadedAt: string;
+  uploadedBy: string | null;
+}
+
 export interface OccurrenceHomework {
   id: number;
   comment: string;
   dueDate: string | null;
   updatedAt: string;
   updatedBy: string | null;
+  files: HomeworkFileMeta[];
+}
+
+export interface SubjectHomeworkEntry {
+  homeworkId: number;
+  lessonTemplateId: number;
+  occurrenceDate: string;
+  type: "lecture" | "seminar" | "lab" | "generated" | "";
+  teacher: string;
+  room: string;
+  comment: string;
+  dueDate: string | null;
+  updatedAt: string;
+  updatedBy: string | null;
+  done: boolean;
+  files: HomeworkFileMeta[];
 }
 
 export interface ScheduleOccurrence {

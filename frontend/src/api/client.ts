@@ -2,9 +2,11 @@ import type {
   AdminUser,
   BmstuGroupMatch,
   GeometryGroup,
+  HomeworkFileMeta,
   LanguageGroup,
   ScheduleOccurrence,
   Semester,
+  SubjectHomeworkEntry,
   SyncRun,
   User,
 } from "../types/schedule";
@@ -44,6 +46,28 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
+}
+
+/** Same auth/error handling as `request`, but for a raw fetch response (file upload/download) instead of always sending/expecting JSON. */
+async function requestBinary(path: string, options: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(options.headers);
+  if (authToken !== null) headers.set("Authorization", `Bearer ${authToken}`);
+
+  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  if (!res.ok) {
+    if (res.status === 401) onUnauthorized?.();
+    let message = `${res.status} ${res.statusText}`;
+    try {
+      const body = await res.json();
+      if (body?.error) {
+        message = typeof body.error === "string" ? body.error : JSON.stringify(body.error);
+      }
+    } catch {
+      // response had no JSON body — keep the status-based message
+    }
+    throw new Error(message);
+  }
+  return res;
 }
 
 export interface AuthResponse {
@@ -93,6 +117,27 @@ export const api = {
 
   deleteHomework: (templateId: number, date: string) =>
     request<void>(`/api/occurrences/${templateId}/${date}`, { method: "DELETE" }),
+
+  uploadHomeworkFile: async (templateId: number, date: string, file: File): Promise<HomeworkFileMeta> => {
+    const body = new FormData();
+    body.append("file", file);
+    const res = await requestBinary(`/api/occurrences/${templateId}/${date}/files`, { method: "POST", body });
+    return (await res.json()) as HomeworkFileMeta;
+  },
+  deleteHomeworkFile: (fileId: number) => request<void>(`/api/homework-files/${fileId}`, { method: "DELETE" }),
+  downloadHomeworkFile: async (fileId: number, filename: string): Promise<void> => {
+    const res = await requestBinary(`/api/homework-files/${fileId}`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  },
+
+  getSubjectHomework: (subject: string) =>
+    request<SubjectHomeworkEntry[]>(`/api/subjects/${encodeURIComponent(subject)}/homework`),
 
   getSemesters: () => request<Semester[]>("/api/semesters"),
   getActiveSemester: () => request<Semester | null>("/api/semesters/active"),

@@ -1,5 +1,6 @@
 import { pool } from "../db/pool.js";
 import type { ScheduleOccurrence } from "../types/schedule.js";
+import { filesByHomeworkId } from "./homeworkFiles.js";
 import { subgroupKey, subgroupLabel, type UserSubgroups } from "./subgroup.js";
 import { dateRangeISO, dayOfWeekMonday1, resolveWeekParity, type WeekParity } from "./weekParity.js";
 
@@ -99,6 +100,8 @@ export async function resolveSchedule(
     }
   }
 
+  const filesByHwId = await filesByHomeworkId([...homeworkMap.values()].map((hw) => hw.homework_id));
+
   const occurrences: ScheduleOccurrence[] = [];
   for (const dateIso of dateRangeISO(fromIso, toIso)) {
     const dow = dayOfWeekMonday1(dateIso);
@@ -123,6 +126,7 @@ export async function resolveSchedule(
               dueDate: hw.due_date,
               updatedAt: hw.updated_at,
               updatedBy: hw.updated_by_name,
+              files: filesByHwId.get(hw.homework_id) ?? [],
             }
           : null,
         done: hw ? hw.done : false,

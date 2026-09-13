@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import { useUser } from "../context/UserContext";
 import type { ScheduleOccurrence } from "../types/schedule";
+import { HomeworkFiles } from "./HomeworkFiles";
 import { NextOccurrenceModal } from "./NextOccurrenceModal";
 
 interface Props {
@@ -60,7 +61,7 @@ export function HomeworkEditor({ occurrence }: Props) {
   };
 
   // No homework assigned yet — nothing to mark as done.
-  const hasHomework = Boolean(savedComment.trim());
+  const hasHomework = Boolean(savedComment.trim()) || Boolean(occurrence.homework?.files.length);
 
   return (
     <div className="hw-editor" onClick={(e) => e.stopPropagation()}>
@@ -100,6 +101,12 @@ export function HomeworkEditor({ occurrence }: Props) {
           </button>
         )}
       </div>
+      <HomeworkFiles
+        templateId={occurrence.lessonTemplateId}
+        date={occurrence.date}
+        files={occurrence.homework?.files ?? []}
+        onChanged={() => queryClient.invalidateQueries({ queryKey: ["schedule"] })}
+      />
       {occurrence.homework?.updatedBy && <div className="hw-editor__meta">изменил(а) {occurrence.homework.updatedBy}</div>}
       {deleteMutation.isError && <p className="form-error">{(deleteMutation.error as Error).message}</p>}
       {showNextModal && (

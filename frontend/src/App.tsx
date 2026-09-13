@@ -5,8 +5,9 @@ import { AdminPage } from "./pages/AdminPage";
 import { LoginPage } from "./pages/LoginPage";
 import { SchedulePage } from "./pages/SchedulePage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { SubjectsPage } from "./pages/SubjectsPage";
 
-type Page = "schedule" | "admin" | "settings";
+type Page = "schedule" | "subjects" | "admin" | "settings";
 
 export function App() {
   const { currentUser, isRestoring, logout } = useUser();
@@ -19,6 +20,7 @@ export function App() {
   const profileIncomplete = !currentUser.languageGroup || !currentUser.geometryGroup;
   const showAdmin = page === "admin" && currentUser.isAdmin;
   const showSettings = page === "settings" || profileIncomplete;
+  const showSubjects = page === "subjects" && !showSettings;
 
   return (
     <div className="app">
@@ -27,6 +29,9 @@ export function App() {
         <nav className="app-header__nav">
           <button type="button" className={page === "schedule" ? "active" : ""} onClick={() => setPage("schedule")}>
             Расписание
+          </button>
+          <button type="button" className={page === "subjects" ? "active" : ""} onClick={() => setPage("subjects")}>
+            Предметы
           </button>
           <button type="button" className={page === "settings" ? "active" : ""} onClick={() => setPage("settings")}>
             Настройки
@@ -52,7 +57,9 @@ export function App() {
           Заполните группы по языку и геометрии в настройках — от этого зависит, какое дз показывается в расписании.
         </p>
       )}
-      <main className="app-main">{showSettings ? <SettingsPage /> : showAdmin ? <AdminPage /> : <SchedulePage />}</main>
+      <main className="app-main">
+        {showSettings ? <SettingsPage /> : showAdmin ? <AdminPage /> : showSubjects ? <SubjectsPage /> : <SchedulePage />}
+      </main>
     </div>
   );
 }
