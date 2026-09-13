@@ -260,6 +260,30 @@ h3 {
   color: var(--ink);
 }
 
+@media (max-width: 700px) {
+  .app-header {
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    padding: 10px 16px;
+  }
+
+  .app-header__nav {
+    order: 3;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .app-header__nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .app-header__nav button {
+    flex-shrink: 0;
+  }
+}
+
 .app-profile-banner {
   margin: 0;
   padding: 8px 20px;
