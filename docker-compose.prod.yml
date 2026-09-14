@@ -1,5 +1,8 @@
 # VPS deploy: `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build`
-# No bind mounts, no host port on postgres, frontend nginx listens on 80.
+# No bind mounts, no host port on postgres. Frontend nginx listens on 80
+# internally and is reached only through the host's shared Traefik instance
+# (external `web` network, see traefik labels below) — no port published on
+# the host, so there's nothing to conflict with Traefik's own 80/443.
 services:
   backend:
     build:
@@ -10,8 +13,20 @@ services:
     build:
       target: runtime
     restart: always
-    ports:
-      - "80:80"
+    networks:
+      - default
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.homework-frontend.rule=Host(`hw.inversia.pro`)"
+      - "traefik.http.routers.homework-frontend.entrypoints=websecure"
+      - "traefik.http.routers.homework-frontend.tls.certresolver=le"
+      - "traefik.http.services.homework-frontend.loadbalancer.server.port=80"
 
   postgres:
     restart: always
+
+networks:
+  web:
+    external: true
