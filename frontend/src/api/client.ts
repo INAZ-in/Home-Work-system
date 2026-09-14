@@ -161,6 +161,7 @@ export const api = {
   activateSemester: (id: number) => request(`/api/semesters/${id}/activate`, { method: "PUT" }),
   setSemesterGroup: (id: number, bmstuGroupUuid: string) =>
     request<Semester>(`/api/semesters/${id}/bmstu-group`, { method: "PUT", body: JSON.stringify({ bmstuGroupUuid }) }),
+  deleteSemester: (id: number) => request<void>(`/api/semesters/${id}`, { method: "DELETE" }),
 
   getSyncRuns: () => request<SyncRun[]>("/api/admin/sync-runs"),
   syncNow: () => request<{ status: string }>("/api/admin/sync-now", { method: "POST" }),

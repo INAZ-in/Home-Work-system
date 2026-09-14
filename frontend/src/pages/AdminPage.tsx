@@ -70,6 +70,11 @@ export function AdminPage() {
     },
   });
 
+  const deleteSemesterMutation = useMutation({
+    mutationFn: (id: number) => api.deleteSemester(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["semesters"] }),
+  });
+
   const handleSearchGroup = async (): Promise<void> => {
     setSearchError(null);
     try {
@@ -138,6 +143,19 @@ export function AdminPage() {
                   >
                     {s.bmstuGroupUuid ? "Изменить группу" : "Указать группу"}
                   </button>
+                  {!s.isActive && (
+                    <button
+                      type="button"
+                      className="semester-list__delete"
+                      onClick={() => {
+                        if (window.confirm(`Удалить семестр «${s.name}»? Это необратимо.`)) {
+                          deleteSemesterMutation.mutate(s.id);
+                        }
+                      }}
+                    >
+                      Удалить
+                    </button>
+                  )}
                 </div>
               </div>
               {groupEditId === s.id && (
@@ -182,6 +200,9 @@ export function AdminPage() {
           ))}
           {semesters.length === 0 && <li>Семестров пока нет.</li>}
         </ul>
+        {deleteSemesterMutation.isError && (
+          <p className="form-error">{(deleteSemesterMutation.error as Error).message}</p>
+        )}
 
         <form className="admin-form" onSubmit={handleCreate}>
           <h3>Новый семестр</h3>

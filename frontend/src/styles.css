@@ -1003,7 +1003,8 @@ h3 {
   color: var(--ink);
 }
 
-.user-table__delete {
+.user-table__delete,
+.semester-list__delete {
   color: var(--danger);
   border-color: var(--danger) !important;
 }

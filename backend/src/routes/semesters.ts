@@ -120,4 +120,29 @@ router.put(
   }),
 );
 
+router.delete(
+  "/:id",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      res.status(400).json({ error: "Invalid semester id" });
+      return;
+    }
+
+    const active = await pool.query("SELECT is_active FROM semesters WHERE id = $1", [id]);
+    if (active.rows.length === 0) {
+      res.status(404).json({ error: "Semester not found" });
+      return;
+    }
+    if (active.rows[0].is_active) {
+      res.status(400).json({ error: "Нельзя удалить активный семестр — сначала сделай активным другой" });
+      return;
+    }
+
+    await pool.query("DELETE FROM semesters WHERE id = $1", [id]);
+    res.status(204).end();
+  }),
+);
+
 export default router;
