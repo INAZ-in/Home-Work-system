@@ -3,6 +3,7 @@ import { z } from "zod";
 import { pool } from "../db/pool.js";
 import { hashPassword } from "../services/auth.js";
 import { findBmstuGroups, runScheduleSync } from "../services/bmstuSync.js";
+import { getStorageUsage } from "../services/homeworkFiles.js";
 import { GEOMETRY_GROUPS, LANGUAGE_GROUPS } from "../services/subgroup.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
@@ -44,6 +45,13 @@ router.get(
     }
     const matches = await findBmstuGroups(parsed.data.query);
     res.json(matches.slice(0, 20));
+  }),
+);
+
+router.get(
+  "/storage-usage",
+  asyncHandler(async (_req, res) => {
+    res.json(await getStorageUsage());
   }),
 );
 

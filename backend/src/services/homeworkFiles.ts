@@ -1,6 +1,30 @@
 import { pool } from "../db/pool.js";
 import type { HomeworkFileMeta } from "../types/schedule.js";
 
+// Files live as bytea rows in Postgres (see migration 006) — there's no
+// filesystem quota backstopping this, so cap the combined size of every
+// homework_files row across the whole app. Once a new upload would push the
+// total past this, uploads are refused until something is deleted.
+export const MAX_TOTAL_STORAGE_BYTES = 2 * 1024 * 1024 * 1024;
+
+export interface StorageUsage {
+  usedBytes: number;
+  totalBytes: number;
+  fileCount: number;
+}
+
+/** Current combined size of every uploaded homework file, app-wide — backs both the upload-time quota check and the admin storage-usage panel. */
+export async function getStorageUsage(): Promise<StorageUsage> {
+  const { rows } = await pool.query<{ used: string; count: string }>(
+    "SELECT COALESCE(SUM(size_bytes), 0)::bigint AS used, COUNT(*)::bigint AS count FROM homework_files",
+  );
+  return {
+    usedBytes: Number(rows[0].used),
+    totalBytes: MAX_TOTAL_STORAGE_BYTES,
+    fileCount: Number(rows[0].count),
+  };
+}
+
 interface FileRow {
   id: number;
   homework_item_id: number;

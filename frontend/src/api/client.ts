@@ -7,6 +7,7 @@ import type {
   PersonalPlan,
   ScheduleOccurrence,
   Semester,
+  StorageUsage,
   SubjectHomeworkEntry,
   SyncRun,
   User,
@@ -165,6 +166,7 @@ export const api = {
   syncNow: () => request<{ status: string }>("/api/admin/sync-now", { method: "POST" }),
   findBmstuGroups: (query: string) =>
     request<BmstuGroupMatch[]>(`/api/admin/bmstu-groups?query=${encodeURIComponent(query)}`),
+  getStorageUsage: () => request<StorageUsage>("/api/admin/storage-usage"),
 
   getAdminUsers: () => request<AdminUser[]>("/api/admin/users"),
   createUserAsAdmin: (name: string, password: string, isAdmin: boolean) =>

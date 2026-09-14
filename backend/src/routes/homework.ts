@@ -4,7 +4,7 @@ import type { Pool, PoolClient } from "pg";
 import { z } from "zod";
 import { pool } from "../db/pool.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
-import { filesByHomeworkId } from "../services/homeworkFiles.js";
+import { filesByHomeworkId, getStorageUsage, MAX_TOTAL_STORAGE_BYTES } from "../services/homeworkFiles.js";
 import { getActiveSemester } from "../services/scheduleResolver.js";
 import { subgroupKey, subgroupLabel } from "../services/subgroup.js";
 import { addDaysISO, dayOfWeekMonday1, formatISODate, resolveWeekParity } from "../services/weekParity.js";
@@ -19,12 +19,6 @@ const fileIdParam = z.coerce.number().int().positive();
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_FILE_SIZE } });
-
-// Files live as bytea rows in Postgres (see migration 006) — there's no
-// filesystem quota backstopping this, so cap the combined size of every
-// homework_files row across the whole app. Once a new upload would push the
-// total past this, uploads are refused until something is deleted.
-const MAX_TOTAL_STORAGE_BYTES = 2 * 1024 * 1024 * 1024;
 
 /** Wraps multer's single-file middleware so a too-large/malformed upload comes back as a normal 400 instead of falling through to the generic 500 handler. */
 function uploadSingleFile(req: Request, res: Response, next: NextFunction): void {
@@ -333,11 +327,8 @@ router.post(
     try {
       await client.query("BEGIN");
 
-      const totalRes = await client.query<{ total: string }>(
-        "SELECT COALESCE(SUM(size_bytes), 0)::bigint AS total FROM homework_files",
-      );
-      const currentTotal = Number(totalRes.rows[0].total);
-      if (currentTotal + req.file.size > MAX_TOTAL_STORAGE_BYTES) {
+      const usage = await getStorageUsage();
+      if (usage.usedBytes + req.file.size > MAX_TOTAL_STORAGE_BYTES) {
         await client.query("ROLLBACK");
         res.status(507).json({
           error: "Общий объём загруженных файлов достиг лимита (2 ГБ) — загрузка новых файлов отключена",

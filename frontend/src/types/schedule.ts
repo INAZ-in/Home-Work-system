@@ -108,6 +108,12 @@ export interface SyncChange {
   new?: string;
 }
 
+export interface StorageUsage {
+  usedBytes: number;
+  totalBytes: number;
+  fileCount: number;
+}
+
 export interface BmstuGroupMatch {
   name: string;
   uuid: string;

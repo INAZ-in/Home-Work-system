@@ -5,9 +5,17 @@ import { SyncLogPanel } from "../components/SyncLogPanel";
 import { UserManagementPanel } from "../components/UserManagementPanel";
 import type { BmstuGroupMatch } from "../types/schedule";
 
+function formatBytes(bytes: number): string {
+  const gib = bytes / (1024 * 1024 * 1024);
+  if (gib >= 1) return `${gib.toFixed(2)} ГиБ`;
+  const mib = bytes / (1024 * 1024);
+  return `${mib.toFixed(1)} МиБ`;
+}
+
 export function AdminPage() {
   const queryClient = useQueryClient();
   const { data: semesters = [] } = useQuery({ queryKey: ["semesters"], queryFn: api.getSemesters });
+  const { data: storageUsage } = useQuery({ queryKey: ["storage-usage"], queryFn: api.getStorageUsage });
 
   const [name, setName] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -232,6 +240,24 @@ export function AdminPage() {
         </div>
         <SyncLogPanel />
       </section>
+
+      {storageUsage && (
+        <section className="admin-section">
+          <h2>Хранилище файлов домашних заданий</h2>
+          <div className="storage-usage__bar">
+            <div
+              className={`storage-usage__bar-fill${
+                storageUsage.usedBytes / storageUsage.totalBytes >= 0.9 ? " storage-usage__bar-fill--full" : ""
+              }`}
+              style={{ width: `${Math.min(100, (storageUsage.usedBytes / storageUsage.totalBytes) * 100)}%` }}
+            />
+          </div>
+          <p className="storage-usage__meta">
+            {formatBytes(storageUsage.usedBytes)} из {formatBytes(storageUsage.totalBytes)} · {storageUsage.fileCount}{" "}
+            файлов
+          </p>
+        </section>
+      )}
 
       <section className="admin-section">
         <h2>Пользователи</h2>

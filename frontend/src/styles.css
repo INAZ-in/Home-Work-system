@@ -805,6 +805,28 @@ h3 {
   padding: 6px 14px;
 }
 
+.storage-usage__bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--border);
+  overflow: hidden;
+  margin: 8px 0;
+}
+
+.storage-usage__bar-fill {
+  height: 100%;
+  background: var(--accent);
+}
+
+.storage-usage__bar-fill--full {
+  background: var(--danger, #d33);
+}
+
+.storage-usage__meta {
+  color: var(--muted, #666);
+  font-size: 0.9em;
+}
+
 .semester-list {
   list-style: none;
   padding: 0;
