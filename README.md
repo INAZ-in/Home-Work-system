@@ -1,4 +1,4 @@
-# HomeWorke
+# Homework
 
 Трекер домашних заданий поверх расписания группы. Расписание тянется напрямую
 с публичного API ЛКС МГТУ им. Баумана (`lks.bmstu.ru`) и обновляется раз в
@@ -93,7 +93,7 @@ docker compose run --rm backend npm run seed -- --semester="Осень 2026" --s
 
 ```bash
 # на сервере, после установки Docker:
-git clone <this-repo> homeworke && cd homeworke
+git clone <this-repo> homework && cd homework
 cp .env.example .env        # обязательно смени POSTGRES_PASSWORD
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 docker compose run --rm backend npm run migrate

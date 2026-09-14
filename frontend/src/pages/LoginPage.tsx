@@ -7,7 +7,7 @@ export function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-page__card">
-        <h1>HomeWorke</h1>
+        <h1>Homework</h1>
         <p>Войди или зарегистрируйся, чтобы продолжить</p>
         <AuthForm onSuccess={login} />
       </div>

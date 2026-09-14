@@ -27,7 +27,7 @@ export function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <div className="app-header__brand">HomeWorke</div>
+        <div className="app-header__brand">Homework</div>
         <nav className="app-header__nav">
           <button type="button" className={page === "schedule" ? "active" : ""} onClick={() => setPage("schedule")}>
             Расписание

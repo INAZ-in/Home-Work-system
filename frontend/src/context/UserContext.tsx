@@ -2,8 +2,8 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { api, setAuthToken, setUnauthorizedHandler, type AuthResponse } from "../api/client";
 import type { User } from "../types/schedule";
 
-const TOKEN_KEY = "homeworke.token";
-const USER_KEY = "homeworke.user";
+const TOKEN_KEY = "homework.token";
+const USER_KEY = "homework.user";
 
 interface UserContextValue {
   currentUser: User | null;

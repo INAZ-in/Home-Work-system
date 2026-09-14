@@ -7,7 +7,7 @@ const PORT = Number(process.env.PORT ?? 4000);
 const app = createApp();
 
 app.listen(PORT, () => {
-  console.log(`HomeWorke backend listening on :${PORT}`);
+  console.log(`Homework backend listening on :${PORT}`);
 });
 
 if (process.env.DISABLE_SYNC_CRON !== "true") {

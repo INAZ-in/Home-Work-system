@@ -1,4 +1,4 @@
-# HomeWorke API
+# Homework API
 
 Express-бэкенд на `backend/src`, весь API живёт под префиксом `/api`. Хранилище — Postgres, миграции в `backend/src/db/migrations`. Ниже — как всё это устроено и как этим пользоваться.
 

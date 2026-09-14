@@ -15,7 +15,7 @@ type LessonType = "lecture" | "seminar" | "lab" | "generated" | "";
 const KNOWN_LESSON_TYPES = new Set<LessonType>(["lecture", "seminar", "lab", "generated", ""]);
 
 async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url, { headers: { "User-Agent": "HomeWorke-sync/1.0" } });
+  const res = await fetch(url, { headers: { "User-Agent": "Homework-sync/1.0" } });
   if (!res.ok) {
     throw new Error(`LKS request failed: ${res.status} ${res.statusText} (${url})`);
   }

@@ -17,7 +17,7 @@ export function SettingsPage() {
   const mutation = useMutation({
     mutationFn: () => api.updateMySubgroups(languageGroup as LanguageGroup, geometryGroup as GeometryGroup),
     onSuccess: (user) => {
-      const token = localStorage.getItem("homeworke.token") ?? "";
+      const token = localStorage.getItem("homework.token") ?? "";
       login({ token, user });
     },
   });
