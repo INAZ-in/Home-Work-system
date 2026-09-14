@@ -40,6 +40,8 @@ interface LessonTemplateRow {
   lesson_type: string;
   teacher: string;
   room: string;
+  start_time_override: string | null;
+  end_time_override: string | null;
 }
 
 interface HomeworkRow {
@@ -74,7 +76,8 @@ export async function resolveSchedule(
   );
 
   const templatesRes = await pool.query<LessonTemplateRow>(
-    `SELECT id, day_of_week, pair_num, week_parity, subject_name, lesson_type, teacher, room
+    `SELECT id, day_of_week, pair_num, week_parity, subject_name, lesson_type, teacher, room,
+            start_time_override::text AS start_time_override, end_time_override::text AS end_time_override
      FROM lesson_templates
      WHERE semester_id = $1 AND is_active
      ORDER BY day_of_week, pair_num`,
@@ -111,10 +114,14 @@ export async function resolveSchedule(
       if (t.day_of_week !== dow) continue;
       if (t.week_parity !== "both" && t.week_parity !== parity) continue;
       const hw = homeworkMap.get(`${t.id}|${dateIso}|${subgroupKey(t.subject_name, t.lesson_type, user)}`);
+      const pair =
+        t.start_time_override && t.end_time_override
+          ? { num: t.pair_num, start: t.start_time_override.slice(0, 5), end: t.end_time_override.slice(0, 5) }
+          : (pairsByNum.get(t.pair_num) ?? { num: t.pair_num, start: "", end: "" });
       occurrences.push({
         date: dateIso,
         lessonTemplateId: t.id,
-        pair: pairsByNum.get(t.pair_num) ?? { num: t.pair_num, start: "", end: "" },
+        pair,
         subject: t.subject_name,
         type: t.lesson_type,
         teacher: t.teacher,

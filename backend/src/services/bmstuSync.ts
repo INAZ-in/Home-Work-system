@@ -100,6 +100,30 @@ interface NormalizedLesson {
   room: string;
   startTime?: string;
   endTime?: string;
+  /** Overrides the shared pair-slot time (see migration 010) — set when the subject text carries its own real start time, e.g. ФКиС's "ФКиС 09:25 Измайлово". */
+  startTimeOverride?: string;
+  endTimeOverride?: string;
+}
+
+const LESSON_DURATION_MINUTES = 90;
+
+/** "09:25" + 90 -> "10:55". Wraps at 24h, though that never comes up for a class start time. */
+function addMinutes(time: string, minutes: number): string {
+  const [h, m] = time.split(":").map(Number);
+  const total = (h * 60 + m + minutes) % (24 * 60);
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
+// Matches e.g. "ФКиС 09:25 Измайлово" — LKS has no field for a lesson's real
+// time when it differs from its nominal pair slot, so it gets written into
+// the subject text instead. Only ФКиС is known to do this.
+const SUBJECT_TIME_OVERRIDE = /^ФКиС\s+(\d{1,2}:\d{2})\b/;
+
+function extractTimeOverride(subject: string): { startTimeOverride: string; endTimeOverride: string } | null {
+  const match = SUBJECT_TIME_OVERRIDE.exec(subject);
+  if (!match) return null;
+  const startTimeOverride = match[1].padStart(5, "0");
+  return { startTimeOverride, endTimeOverride: addMinutes(startTimeOverride, LESSON_DURATION_MINUTES) };
 }
 
 function normalizeLessonType(raw: string | undefined): LessonType {
@@ -138,6 +162,7 @@ function normalizeLesson(raw: RawLesson): NormalizedLesson {
     room,
     startTime: raw.startTime,
     endTime: raw.endTime,
+    ...extractTimeOverride(subject),
   };
 }
 
@@ -176,6 +201,8 @@ interface DbTemplateRow {
   lesson_type: string;
   teacher: string;
   room: string;
+  start_time_override: string | null;
+  end_time_override: string | null;
 }
 
 export async function runScheduleSync(): Promise<SyncResult> {
@@ -211,7 +238,8 @@ export async function runScheduleSync(): Promise<SyncResult> {
     }
 
     const dbTemplatesRes = await client.query<DbTemplateRow>(
-      `SELECT id, day_of_week, pair_num, week_parity, subject_name, lesson_type, teacher, room
+      `SELECT id, day_of_week, pair_num, week_parity, subject_name, lesson_type, teacher, room,
+              start_time_override::text AS start_time_override, end_time_override::text AS end_time_override
        FROM lesson_templates
        WHERE semester_id = $1 AND is_active`,
       [semester.id],
@@ -246,30 +274,50 @@ export async function runScheduleSync(): Promise<SyncResult> {
       if (!existing) {
         await client.query(
           `INSERT INTO lesson_templates
-             (semester_id, day_of_week, pair_num, week_parity, subject_name, lesson_type, teacher, room, is_active)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
+             (semester_id, day_of_week, pair_num, week_parity, subject_name, lesson_type, teacher, room,
+              start_time_override, end_time_override, is_active)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true)
            ON CONFLICT (semester_id, day_of_week, pair_num, week_parity, subject_name)
            DO UPDATE SET lesson_type = EXCLUDED.lesson_type, teacher = EXCLUDED.teacher,
-                          room = EXCLUDED.room, is_active = true`,
-          [semester.id, live.day, live.pair, live.week, live.subject, live.type, live.teacher, live.room],
+                          room = EXCLUDED.room, start_time_override = EXCLUDED.start_time_override,
+                          end_time_override = EXCLUDED.end_time_override, is_active = true`,
+          [
+            semester.id,
+            live.day,
+            live.pair,
+            live.week,
+            live.subject,
+            live.type,
+            live.teacher,
+            live.room,
+            live.startTimeOverride ?? null,
+            live.endTimeOverride ?? null,
+          ],
         );
         addedCount++;
         details.push({ type: "added", day: live.day, pair: live.pair, parity: live.week, subject: live.subject });
         continue;
       }
 
+      const existingStartOverride = existing.start_time_override?.slice(0, 5) ?? null;
+      const liveStartOverride = live.startTimeOverride ?? null;
+      const liveEndOverride = live.endTimeOverride ?? null;
+
       const changedFields: { field: string; old: string; new: string }[] = [];
       if (existing.lesson_type !== live.type) changedFields.push({ field: "type", old: existing.lesson_type, new: live.type });
       if (existing.teacher !== live.teacher) changedFields.push({ field: "teacher", old: existing.teacher, new: live.teacher });
       if (existing.room !== live.room) changedFields.push({ field: "room", old: existing.room, new: live.room });
+      if (existingStartOverride !== liveStartOverride) {
+        changedFields.push({ field: "startTimeOverride", old: existingStartOverride ?? "", new: liveStartOverride ?? "" });
+      }
 
       if (changedFields.length > 0) {
-        await client.query(`UPDATE lesson_templates SET lesson_type = $1, teacher = $2, room = $3 WHERE id = $4`, [
-          live.type,
-          live.teacher,
-          live.room,
-          existing.id,
-        ]);
+        await client.query(
+          `UPDATE lesson_templates
+           SET lesson_type = $1, teacher = $2, room = $3, start_time_override = $4, end_time_override = $5
+           WHERE id = $6`,
+          [live.type, live.teacher, live.room, liveStartOverride, liveEndOverride, existing.id],
+        );
         updatedCount++;
         for (const f of changedFields) {
           details.push({
