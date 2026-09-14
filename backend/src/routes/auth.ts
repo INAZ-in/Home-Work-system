@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../db/pool.js";
+import { loginIpLimiter, loginUsernameLimiter, registerIpLimiter } from "../middleware/authRateLimit.js";
 import { currentUser } from "../middleware/currentUser.js";
 import { hashPassword, signToken, verifyPassword } from "../services/auth.js";
 import { GEOMETRY_GROUPS, LANGUAGE_GROUPS } from "../services/subgroup.js";
@@ -24,6 +25,7 @@ const registerSchema = credsSchema.extend({
 
 router.post(
   "/register",
+  registerIpLimiter,
   asyncHandler(async (req, res) => {
     const parsed = registerSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -66,6 +68,8 @@ router.post(
 
 router.post(
   "/login",
+  loginIpLimiter,
+  loginUsernameLimiter,
   asyncHandler(async (req, res) => {
     const parsed = credsSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -101,6 +105,9 @@ router.post(
     }
 
     await pool.query("UPDATE users SET last_login_at = now() WHERE id = $1", [user.id]);
+    // A real user who fumbled the password once or twice shouldn't be left
+    // sitting close to the per-username limit after finally getting it right.
+    loginUsernameLimiter.resetKey(name.toLowerCase());
 
     res.json({
       token: signToken(user.id),

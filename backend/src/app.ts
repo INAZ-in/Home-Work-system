@@ -13,6 +13,12 @@ import usersRouter from "./routes/users.js";
 
 export function createApp(): Express {
   const app = express();
+  // Exactly one reverse-proxy hop in front of this process in every
+  // deployment (nginx in prod, Vite's dev proxy locally — see
+  // frontend/nginx.conf and frontend/vite.config.ts) — trusting it is what
+  // lets req.ip resolve the real client address from X-Forwarded-For
+  // instead of the proxy's own, which the auth rate limiters key on.
+  app.set("trust proxy", 1);
   app.use(cors());
   app.use(express.json());
 
