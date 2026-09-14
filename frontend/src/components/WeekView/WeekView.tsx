@@ -1,6 +1,8 @@
+import { useMediaQuery } from "../../hooks/useMediaQuery";
 import type { PersonalPlan, ScheduleOccurrence } from "../../types/schedule";
 import { addDays, startOfWeek, todayISO } from "../../utils/date";
 import { DayColumn } from "./DayColumn";
+import { WeekTimeGrid } from "./WeekTimeGrid";
 
 interface Props {
   anchorDate: string;
@@ -8,6 +10,11 @@ interface Props {
   plans?: PersonalPlan[];
   isLoading: boolean;
 }
+
+// Matches the `max-width: 900px` breakpoint in .week-view__grid — below it
+// days stack full-width one at a time, so there's no cross-day row to align
+// and the shared time axis would just waste horizontal space.
+const SIDE_BY_SIDE = "(min-width: 901px)";
 
 function groupByDate<T extends { date: string }>(items: T[]): Map<string, T[]> {
   const byDate = new Map<string, T[]>();
@@ -28,21 +35,26 @@ export function WeekView({ anchorDate, occurrences, plans = [], isLoading }: Pro
   const plansByDate = groupByDate(plans);
 
   const today = todayISO();
+  const sideBySide = useMediaQuery(SIDE_BY_SIDE);
 
   return (
     <div className="week-view">
       {isLoading && <div className="loading-banner">Загрузка расписания…</div>}
-      <div className="week-view__grid">
-        {days.map((date) => (
-          <DayColumn
-            key={date}
-            date={date}
-            occurrences={occByDate.get(date) ?? []}
-            plans={plansByDate.get(date) ?? []}
-            isToday={date === today}
-          />
-        ))}
-      </div>
+      {sideBySide ? (
+        <WeekTimeGrid days={days} occByDate={occByDate} plansByDate={plansByDate} today={today} />
+      ) : (
+        <div className="week-view__grid">
+          {days.map((date) => (
+            <DayColumn
+              key={date}
+              date={date}
+              occurrences={occByDate.get(date) ?? []}
+              plans={plansByDate.get(date) ?? []}
+              isToday={date === today}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
