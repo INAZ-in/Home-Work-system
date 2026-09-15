@@ -67,7 +67,10 @@ export interface PersonalPlan {
 export interface ScheduleOccurrence {
   date: string;
   lessonTemplateId: number;
+  /** The occurrence's actual time — reflects a per-lesson override (see migration 010) when one applies. What to display on the card. */
   pair: PairInfo;
+  /** This pair number's usual time from the shared `pairs` table, regardless of whether *this* occurrence has its own override — same value for every occurrence sharing a pair number. Lets the week view judge how far an override deviates from the norm before giving it its own row (see WeekTimeGrid.tsx). */
+  nominalPair: PairInfo;
   subject: string;
   type: string;
   teacher: string;

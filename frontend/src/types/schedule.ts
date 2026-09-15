@@ -54,7 +54,10 @@ export interface SubjectHomeworkEntry {
 export interface ScheduleOccurrence {
   date: string;
   lessonTemplateId: number;
+  /** The occurrence's actual time — reflects a per-lesson override when one applies. What to display on the card. */
   pair: PairInfo;
+  /** This pair number's usual time, same for every occurrence sharing a pair number regardless of any override on this specific one — used by the week view to judge how far an override deviates before giving it its own row. */
+  nominalPair: PairInfo;
   subject: string;
   type: "lecture" | "seminar" | "lab" | "generated" | "";
   teacher: string;

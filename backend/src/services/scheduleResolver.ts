@@ -134,14 +134,16 @@ export async function resolveSchedule(
       if (t.day_of_week !== dow) continue;
       if (t.week_parity !== "both" && t.week_parity !== parity) continue;
       const hw = homeworkMap.get(`${t.id}|${dateIso}|${subgroupKey(t.subject_name, t.lesson_type, user)}`);
+      const nominalPair = pairsByNum.get(t.pair_num) ?? { num: t.pair_num, start: "", end: "" };
       const pair =
         t.start_time_override && t.end_time_override
           ? { num: t.pair_num, start: t.start_time_override.slice(0, 5), end: t.end_time_override.slice(0, 5) }
-          : (pairsByNum.get(t.pair_num) ?? { num: t.pair_num, start: "", end: "" });
+          : nominalPair;
       occurrences.push({
         date: dateIso,
         lessonTemplateId: t.id,
         pair,
+        nominalPair,
         subject: t.subject_name,
         type: t.lesson_type,
         teacher: t.teacher,

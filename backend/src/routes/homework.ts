@@ -44,6 +44,8 @@ interface CandidateTemplate {
   lesson_type: string;
   teacher: string;
   room: string;
+  start_time_override: string | null;
+  end_time_override: string | null;
 }
 
 /** Earliest date strictly after `afterIso` that this specific template occurs, or null if none within 30 days (parity cycles every 14). */
@@ -104,7 +106,8 @@ router.get(
     }
 
     const candidatesRes = await pool.query<CandidateTemplate>(
-      `SELECT id, day_of_week, week_parity, pair_num, subject_name, lesson_type, teacher, room
+      `SELECT id, day_of_week, week_parity, pair_num, subject_name, lesson_type, teacher, room,
+              start_time_override::text AS start_time_override, end_time_override::text AS end_time_override
        FROM lesson_templates
        WHERE semester_id = $1 AND is_active AND subject_name = $2 AND lesson_type = $3`,
       [origin.semester_id, origin.subject_name, origin.lesson_type],
@@ -127,7 +130,16 @@ router.get(
       "SELECT start_time, end_time FROM pairs WHERE pair_num = $1",
       [template.pair_num],
     );
-    const pair = pairRes.rows[0];
+    const pairRow = pairRes.rows[0];
+    const nominalPair = {
+      num: template.pair_num,
+      start: pairRow?.start_time.slice(0, 5) ?? "",
+      end: pairRow?.end_time.slice(0, 5) ?? "",
+    };
+    const pair =
+      template.start_time_override && template.end_time_override
+        ? { num: template.pair_num, start: template.start_time_override.slice(0, 5), end: template.end_time_override.slice(0, 5) }
+        : nominalPair;
 
     const hwRes = await pool.query<{
       id: number;
@@ -157,7 +169,8 @@ router.get(
     const occurrence: ScheduleOccurrence = {
       date: nextDate,
       lessonTemplateId: template.id,
-      pair: { num: template.pair_num, start: pair?.start_time.slice(0, 5) ?? "", end: pair?.end_time.slice(0, 5) ?? "" },
+      pair,
+      nominalPair,
       subject: template.subject_name,
       type: template.lesson_type,
       teacher: template.teacher,
