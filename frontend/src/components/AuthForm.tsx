@@ -20,13 +20,24 @@ export function AuthForm({ onSuccess }: Props) {
   const [password, setPassword] = useState("");
   const [languageGroup, setLanguageGroup] = useState<LanguageGroup | "">("");
   const [geometryGroup, setGeometryGroup] = useState<GeometryGroup | "">("");
+  // Set once registration succeeds but the account still needs an admin's
+  // sign-off (see POST /api/auth/register) — replaces the form with a
+  // status message instead of logging the user straight in.
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
 
   const mutation = useMutation({
     mutationFn: () =>
       mode === "login"
         ? api.login(name, password)
         : api.register(name, password, languageGroup as LanguageGroup, geometryGroup as GeometryGroup),
-    onSuccess,
+    onSuccess: (result) => {
+      if ("pending" in result) {
+        setPendingMessage(result.message);
+        setPassword("");
+        return;
+      }
+      onSuccess(result);
+    },
   });
 
   const handleSubmit = (e: FormEvent): void => {
@@ -38,8 +49,20 @@ export function AuthForm({ onSuccess }: Props) {
 
   const switchMode = (next: Mode): void => {
     setMode(next);
+    setPendingMessage(null);
     mutation.reset();
   };
+
+  if (pendingMessage) {
+    return (
+      <div className="auth-form">
+        <p className="auth-form__hint">{pendingMessage}</p>
+        <button type="button" className="auth-form__back-button" onClick={() => switchMode("login")}>
+          К входу
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="auth-form">

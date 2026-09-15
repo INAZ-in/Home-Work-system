@@ -13,6 +13,17 @@ export interface HomeworkFileMeta {
   uploadedBy: string | null;
 }
 
+export type HomeworkKind = "regular" | "modular";
+
+export type LessonEventType = "rk" | "kr" | "module_end" | "rabotka";
+
+export const LESSON_EVENT_LABELS: Record<LessonEventType, string> = {
+  rk: "РК",
+  kr: "КР",
+  module_end: "Конец модуля",
+  rabotka: "Работка",
+};
+
 export interface OccurrenceHomework {
   id: number;
   comment: string;
@@ -20,6 +31,7 @@ export interface OccurrenceHomework {
   updatedAt: string;
   updatedBy: string | null;
   files: HomeworkFileMeta[];
+  kind: HomeworkKind;
 }
 
 export interface SubjectHomeworkEntry {
@@ -35,6 +47,8 @@ export interface SubjectHomeworkEntry {
   updatedBy: string | null;
   done: boolean;
   files: HomeworkFileMeta[];
+  kind: HomeworkKind;
+  subgroupLabel: string | null;
 }
 
 export interface ScheduleOccurrence {
@@ -48,6 +62,17 @@ export interface ScheduleOccurrence {
   homework: OccurrenceHomework | null;
   done: boolean;
   subgroupLabel: string | null;
+  event: LessonEventType | null;
+}
+
+export interface UpcomingEvent {
+  lessonTemplateId: number;
+  date: string;
+  eventType: LessonEventType;
+  subject: string;
+  type: "lecture" | "seminar" | "lab" | "generated" | "";
+  teacher: string;
+  room: string;
 }
 
 export type LanguageGroup = "en_strong" | "en_weak" | "de" | "es";
@@ -72,6 +97,8 @@ export interface User {
   languageGroup: LanguageGroup | null;
   geometryGroup: GeometryGroup | null;
   canCreatePlans: boolean;
+  /** Junior-admin: may delete homework in their own foreign-language/descriptive-geometry subgroup only. */
+  groupAdmin: boolean;
 }
 
 export interface PersonalPlan {
@@ -86,6 +113,7 @@ export interface PersonalPlan {
 export interface AdminUser extends User {
   createdAt: string;
   lastLoginAt: string | null;
+  approved: boolean;
 }
 
 export interface Semester {

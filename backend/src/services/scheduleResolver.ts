@@ -1,5 +1,5 @@
 import { pool } from "../db/pool.js";
-import type { ScheduleOccurrence } from "../types/schedule.js";
+import type { LessonEventType, ScheduleOccurrence } from "../types/schedule.js";
 import { filesByHomeworkId } from "./homeworkFiles.js";
 import { subgroupKey, subgroupLabel, type UserSubgroups } from "./subgroup.js";
 import { dateRangeISO, dayOfWeekMonday1, resolveWeekParity, type WeekParity } from "./weekParity.js";
@@ -54,6 +54,13 @@ interface HomeworkRow {
   updated_by_name: string | null;
   done: boolean;
   subgroup: string;
+  kind: "regular" | "modular";
+}
+
+interface EventRow {
+  lesson_template_id: number;
+  occurrence_date: string;
+  event_type: LessonEventType;
 }
 
 export async function resolveSchedule(
@@ -91,7 +98,7 @@ export async function resolveSchedule(
     const hwRes = await pool.query<HomeworkRow>(
       `SELECT hi.lesson_template_id, hi.occurrence_date::text AS occurrence_date, hi.id AS homework_id,
               hi.comment, hi.due_date::text AS due_date, hi.updated_at, u.name AS updated_by_name,
-              hi.subgroup, COALESCE(hc.done, false) AS done
+              hi.subgroup, COALESCE(hc.done, false) AS done, hi.kind
        FROM homework_items hi
        LEFT JOIN users u ON u.id = hi.updated_by
        LEFT JOIN homework_completions hc ON hc.homework_item_id = hi.id AND hc.user_id = $1
@@ -104,6 +111,19 @@ export async function resolveSchedule(
   }
 
   const filesByHwId = await filesByHomeworkId([...homeworkMap.values()].map((hw) => hw.homework_id));
+
+  const eventMap = new Map<string, LessonEventType>();
+  if (templateIds.length > 0) {
+    const eventsRes = await pool.query<EventRow>(
+      `SELECT lesson_template_id, occurrence_date::text AS occurrence_date, event_type
+       FROM lesson_events
+       WHERE occurrence_date BETWEEN $1 AND $2 AND lesson_template_id = ANY($3::int[])`,
+      [fromIso, toIso, templateIds],
+    );
+    for (const row of eventsRes.rows) {
+      eventMap.set(`${row.lesson_template_id}|${row.occurrence_date}`, row.event_type);
+    }
+  }
 
   const occurrences: ScheduleOccurrence[] = [];
   for (const dateIso of dateRangeISO(fromIso, toIso)) {
@@ -134,10 +154,12 @@ export async function resolveSchedule(
               updatedAt: hw.updated_at,
               updatedBy: hw.updated_by_name,
               files: filesByHwId.get(hw.homework_id) ?? [],
+              kind: hw.kind,
             }
           : null,
         done: hw ? hw.done : false,
         subgroupLabel: subgroupLabel(t.subject_name, t.lesson_type, user),
+        event: eventMap.get(`${t.id}|${dateIso}`) ?? null,
       });
     }
   }

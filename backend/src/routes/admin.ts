@@ -63,8 +63,9 @@ router.get(
     const { rows } = await pool.query(
       `SELECT id, name, is_admin AS "isAdmin", created_at AS "createdAt",
               language_group AS "languageGroup", geometry_group AS "geometryGroup",
-              can_create_plans AS "canCreatePlans", last_login_at AS "lastLoginAt"
-       FROM users ORDER BY name`,
+              can_create_plans AS "canCreatePlans", group_admin AS "groupAdmin",
+              last_login_at AS "lastLoginAt", approved
+       FROM users ORDER BY approved, name`,
     );
     res.json(rows);
   }),
@@ -99,6 +100,30 @@ router.post(
       [name, passwordHash, isAdmin],
     );
     res.status(201).json(inserted.rows[0]);
+  }),
+);
+
+router.put(
+  "/users/:id/approve",
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      res.status(400).json({ error: "Invalid user id" });
+      return;
+    }
+
+    const updated = await pool.query(
+      `UPDATE users SET approved = true WHERE id = $1
+       RETURNING id, name, is_admin AS "isAdmin", created_at AS "createdAt",
+                 language_group AS "languageGroup", geometry_group AS "geometryGroup",
+                 can_create_plans AS "canCreatePlans", last_login_at AS "lastLoginAt", approved`,
+      [id],
+    );
+    if (updated.rows.length === 0) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    res.json(updated.rows[0]);
   }),
 );
 
@@ -212,6 +237,36 @@ router.put(
                  language_group AS "languageGroup", geometry_group AS "geometryGroup",
                  can_create_plans AS "canCreatePlans"`,
       [parsed.data.canCreatePlans, id],
+    );
+    if (updated.rows.length === 0) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    res.json(updated.rows[0]);
+  }),
+);
+
+const setGroupAdminSchema = z.object({ groupAdmin: z.boolean() });
+
+// Junior-admin toggle: lets a full admin deputize a user to delete homework
+// in their own foreign-language/descriptive-geometry subgroup — see
+// routes/homework.ts DELETE /occurrences for the scoping rule this grants.
+router.put(
+  "/users/:id/group-admin",
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    const parsed = setGroupAdminSchema.safeParse(req.body);
+    if (!Number.isInteger(id) || id <= 0 || !parsed.success) {
+      res.status(400).json({ error: "Invalid request" });
+      return;
+    }
+
+    const updated = await pool.query(
+      `UPDATE users SET group_admin = $1 WHERE id = $2
+       RETURNING id, name, is_admin AS "isAdmin", created_at AS "createdAt",
+                 language_group AS "languageGroup", geometry_group AS "geometryGroup",
+                 can_create_plans AS "canCreatePlans", group_admin AS "groupAdmin"`,
+      [parsed.data.groupAdmin, id],
     );
     if (updated.rows.length === 0) {
       res.status(404).json({ error: "User not found" });

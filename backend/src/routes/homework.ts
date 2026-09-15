@@ -4,11 +4,11 @@ import type { Pool, PoolClient } from "pg";
 import { z } from "zod";
 import { pool } from "../db/pool.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
-import { filesByHomeworkId, getStorageUsage, MAX_TOTAL_STORAGE_BYTES } from "../services/homeworkFiles.js";
+import { filesByHomeworkId, getStorageUsage, MAX_TOTAL_STORAGE_BYTES, subjectFiles } from "../services/homeworkFiles.js";
 import { getActiveSemester } from "../services/scheduleResolver.js";
 import { subgroupKey, subgroupLabel } from "../services/subgroup.js";
 import { addDaysISO, dayOfWeekMonday1, formatISODate, resolveWeekParity } from "../services/weekParity.js";
-import type { ScheduleOccurrence } from "../types/schedule.js";
+import type { LessonEventType, ScheduleOccurrence } from "../types/schedule.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 const router = Router();
@@ -136,9 +136,10 @@ router.get(
       updated_at: string;
       updated_by_name: string | null;
       done: boolean;
+      kind: "regular" | "modular";
     }>(
       `SELECT hi.id, hi.comment, hi.due_date::text AS due_date, hi.updated_at, u.name AS updated_by_name,
-              COALESCE(hc.done, false) AS done
+              COALESCE(hc.done, false) AS done, hi.kind
        FROM homework_items hi
        LEFT JOIN users u ON u.id = hi.updated_by
        LEFT JOIN homework_completions hc ON hc.homework_item_id = hi.id AND hc.user_id = $1
@@ -147,6 +148,11 @@ router.get(
     );
     const hw = hwRes.rows[0];
     const files = hw ? (await filesByHomeworkId([hw.id])).get(hw.id) ?? [] : [];
+
+    const eventRes = await pool.query<{ event_type: LessonEventType }>(
+      "SELECT event_type FROM lesson_events WHERE lesson_template_id = $1 AND occurrence_date = $2",
+      [template.id, nextDate],
+    );
 
     const occurrence: ScheduleOccurrence = {
       date: nextDate,
@@ -164,10 +170,12 @@ router.get(
             updatedAt: hw.updated_at,
             updatedBy: hw.updated_by_name,
             files,
+            kind: hw.kind,
           }
         : null,
       done: hw ? hw.done : false,
       subgroupLabel: subgroupLabel(template.subject_name, template.lesson_type, req.user!),
+      event: eventRes.rows[0]?.event_type ?? null,
     };
     res.json(occurrence);
   }),
@@ -216,8 +224,18 @@ const commentSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .nullable()
     .optional(),
+  // Only meaningful for subjects flagged in modular_subjects (see
+  // routes/schedule.ts) — omitted, it leaves the item's existing kind alone
+  // (defaults to 'regular' for a brand-new item).
+  kind: z.enum(["regular", "modular"]).optional(),
 });
 
+// A regular user may only ADD homework (the item doesn't exist yet, or
+// exists with an empty comment — e.g. a file was uploaded but no
+// description written). Once real text has been entered, further edits
+// require a full admin, or a "group admin" (migration 014) within their own
+// foreign-language/descriptive-geometry subgroup — same scoping rule as
+// homework deletion and event marking below.
 router.put(
   "/occurrences/:templateId/:date/comment",
   asyncHandler(async (req, res) => {
@@ -233,13 +251,26 @@ router.put(
     try {
       await client.query("BEGIN");
       const subgroup = await subgroupForTemplate(client, templateId.data, req.user!);
+
+      const existing = await client.query<{ comment: string }>(
+        "SELECT comment FROM homework_items WHERE lesson_template_id = $1 AND occurrence_date = $2 AND subgroup = $3",
+        [templateId.data, date.data, subgroup],
+      );
+      const alreadyEntered = (existing.rows[0]?.comment ?? "").trim() !== "";
+      const canEdit = req.user!.isAdmin || (req.user!.groupAdmin && subgroup !== "");
+      if (alreadyEntered && !canEdit) {
+        await client.query("ROLLBACK");
+        res.status(403).json({ error: "Редактировать уже внесённое дз может только администратор" });
+        return;
+      }
+
       const homeworkId = await findOrCreateHomeworkItem(client, templateId.data, date.data, req.user!.id, subgroup);
       const updated = await client.query(
         `UPDATE homework_items
-         SET comment = $1, due_date = $2, updated_by = $3, updated_at = now()
+         SET comment = $1, due_date = $2, updated_by = $3, updated_at = now(), kind = COALESCE($5, kind)
          WHERE id = $4
-         RETURNING id, comment, due_date::text AS "dueDate", updated_at AS "updatedAt"`,
-        [body.data.comment, body.data.dueDate ?? null, req.user!.id, homeworkId],
+         RETURNING id, comment, due_date::text AS "dueDate", updated_at AS "updatedAt", kind`,
+        [body.data.comment, body.data.dueDate ?? null, req.user!.id, homeworkId, body.data.kind ?? null],
       );
       await client.query("COMMIT");
       res.json({ ...updated.rows[0], updatedBy: req.user!.name });
@@ -288,12 +319,62 @@ router.put(
   }),
 );
 
-// Admin-only: wipes the homework item entirely (comment + everyone's "done"
-// state via the completions cascade) — regular users can only clear the
-// comment text via the PUT above, not remove the row.
+const EVENT_TYPES = ["rk", "kr", "module_end", "rabotka"] as const;
+const eventSchema = z.object({ eventType: z.enum(EVENT_TYPES).nullable() });
+
+// Marks (or clears) this specific occurrence as an upcoming event
+// (РК/КР/Конец модуля/Работка) — surfaced in the "Предстоящие мероприятия"
+// block. A full admin may mark any occurrence; a junior "group admin" (see
+// migration 014) only on an occurrence in their own foreign-language/
+// descriptive-geometry subgroup (subgroupForTemplate returns non-""),
+// matching the same scoping rule as homework deletion below.
+router.put(
+  "/occurrences/:templateId/:date/event",
+  asyncHandler(async (req, res) => {
+    const templateId = templateIdParam.safeParse(req.params.templateId);
+    const date = dateParam.safeParse(req.params.date);
+    const body = eventSchema.safeParse(req.body);
+    if (!templateId.success || !date.success || !body.success) {
+      res.status(400).json({ error: "Invalid request" });
+      return;
+    }
+
+    const subgroup = await subgroupForTemplate(pool, templateId.data, req.user!);
+    const canSetEvent = req.user!.isAdmin || (req.user!.groupAdmin && subgroup !== "");
+    if (!canSetEvent) {
+      res.status(403).json({ error: "Admin access required" });
+      return;
+    }
+
+    if (body.data.eventType === null) {
+      await pool.query("DELETE FROM lesson_events WHERE lesson_template_id = $1 AND occurrence_date = $2", [
+        templateId.data,
+        date.data,
+      ]);
+      res.status(204).end();
+      return;
+    }
+
+    await pool.query(
+      `INSERT INTO lesson_events (lesson_template_id, occurrence_date, event_type, created_by)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (lesson_template_id, occurrence_date)
+       DO UPDATE SET event_type = EXCLUDED.event_type, created_by = EXCLUDED.created_by, updated_at = now()`,
+      [templateId.data, date.data, body.data.eventType, req.user!.id],
+    );
+    res.status(204).end();
+  }),
+);
+
+// Wipes the homework item entirely (comment + everyone's "done" state via
+// the completions cascade) — regular users can only clear the comment text
+// via the PUT above, not remove the row. A full admin may delete any
+// occurrence; a junior "group admin" (see migration 014) may delete only
+// within their own foreign-language/descriptive-geometry subgroup — i.e.
+// subgroup is non-"" and matches the slice they themselves see, never the
+// shared "" bucket other subgroups (or the whole class) rely on too.
 router.delete(
   "/occurrences/:templateId/:date",
-  requireAdmin,
   asyncHandler(async (req, res) => {
     const templateId = templateIdParam.safeParse(req.params.templateId);
     const date = dateParam.safeParse(req.params.date);
@@ -303,6 +384,12 @@ router.delete(
     }
 
     const subgroup = await subgroupForTemplate(pool, templateId.data, req.user!);
+    const canDelete = req.user!.isAdmin || (req.user!.groupAdmin && subgroup !== "");
+    if (!canDelete) {
+      res.status(403).json({ error: "Admin access required" });
+      return;
+    }
+
     await pool.query("DELETE FROM homework_items WHERE lesson_template_id = $1 AND occurrence_date = $2 AND subgroup = $3", [
       templateId.data,
       date.data,
@@ -416,6 +503,9 @@ router.get(
   }),
 );
 
+// Uploading a file is part of "adding" homework and stays open to everyone
+// (see POST .../files above); removing one is an edit, so it follows the
+// same admin/scoped-group-admin rule as PUT .../comment above.
 router.delete(
   "/homework-files/:id",
   asyncHandler(async (req, res) => {
@@ -430,9 +520,53 @@ router.delete(
       res.status(404).json({ error: "File not found" });
       return;
     }
+    const canDeleteFile = req.user!.isAdmin || (req.user!.groupAdmin && info.subgroup !== "");
+    if (!canDeleteFile) {
+      res.status(403).json({ error: "Удалять файлы может только администратор" });
+      return;
+    }
 
     await pool.query("DELETE FROM homework_files WHERE id = $1", [fileId.data]);
     res.status(204).end();
+  }),
+);
+
+interface UpcomingEventRow {
+  lesson_template_id: number;
+  occurrence_date: string;
+  event_type: LessonEventType;
+  subject_name: string;
+  lesson_type: string;
+  teacher: string;
+  room: string;
+}
+
+// Every future-or-today marker across the schedule (not scoped to a single
+// subject) — backs the "Предстоящие мероприятия" block. Read-only for
+// everyone; only PUT .../event (above) requires admin.
+router.get(
+  "/events/upcoming",
+  asyncHandler(async (_req, res) => {
+    const { rows } = await pool.query<UpcomingEventRow>(
+      `SELECT le.lesson_template_id, le.occurrence_date::text AS occurrence_date, le.event_type,
+              lt.subject_name, lt.lesson_type, lt.teacher, lt.room
+       FROM lesson_events le
+       JOIN lesson_templates lt ON lt.id = le.lesson_template_id
+       WHERE le.occurrence_date >= CURRENT_DATE
+       ORDER BY le.occurrence_date ASC
+       LIMIT 50`,
+    );
+    res.json(
+      rows.map((r) => ({
+        lessonTemplateId: r.lesson_template_id,
+        date: r.occurrence_date,
+        eventType: r.event_type,
+        subject: r.subject_name,
+        type: r.lesson_type,
+        teacher: r.teacher,
+        room: r.room,
+      })),
+    );
   }),
 );
 
@@ -453,6 +587,7 @@ interface SubjectHomeworkRow {
   updated_by_name: string | null;
   subgroup: string;
   done: boolean;
+  kind: "regular" | "modular";
 }
 
 // All homework ever entered for a subject (any date, past or future) in the
@@ -481,7 +616,7 @@ router.get(
     const hwRes = await pool.query<SubjectHomeworkRow>(
       `SELECT hi.id, hi.lesson_template_id, hi.occurrence_date::text AS occurrence_date, hi.comment,
               hi.due_date::text AS due_date, hi.updated_at, u.name AS updated_by_name, hi.subgroup,
-              COALESCE(hc.done, false) AS done
+              COALESCE(hc.done, false) AS done, hi.kind
        FROM homework_items hi
        LEFT JOIN users u ON u.id = hi.updated_by
        LEFT JOIN homework_completions hc ON hc.homework_item_id = hi.id AND hc.user_id = $1
@@ -513,9 +648,104 @@ router.get(
           updatedBy: row.updated_by_name,
           done: row.done,
           files: filesMap.get(row.id) ?? [],
+          kind: row.kind,
+          subgroupLabel: subgroupLabel(subjectName, template.lesson_type, req.user!),
         };
       }),
     );
+  }),
+);
+
+// Shared study files (textbooks, reference materials) for a subject as a
+// whole — not tied to any lesson occurrence or subgroup, visible to every
+// viewer of that subject's "Предметы" page. Uploading stays open to
+// everyone (same as homework file uploads — it's "adding", not editing);
+// only an admin may remove one, since there's no subgroup to scope a
+// junior admin's delete rights to here.
+router.get(
+  "/subjects/:name/files",
+  asyncHandler(async (req, res) => {
+    res.json(await subjectFiles(req.params.name));
+  }),
+);
+
+router.post(
+  "/subjects/:name/files",
+  uploadSingleFile,
+  asyncHandler(async (req, res) => {
+    if (!req.file) {
+      res.status(400).json({ error: "Invalid request" });
+      return;
+    }
+
+    const usage = await getStorageUsage();
+    if (usage.usedBytes + req.file.size > MAX_TOTAL_STORAGE_BYTES) {
+      res.status(507).json({
+        error: "Общий объём загруженных файлов достиг лимита (2 ГБ) — загрузка новых файлов отключена",
+      });
+      return;
+    }
+
+    const inserted = await pool.query<{ id: number; uploaded_at: string }>(
+      `INSERT INTO subject_files (subject_name, filename, content_type, size_bytes, data, uploaded_by)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, uploaded_at`,
+      [req.params.name, req.file.originalname, req.file.mimetype, req.file.size, req.file.buffer, req.user!.id],
+    );
+    res.status(201).json({
+      id: inserted.rows[0].id,
+      filename: req.file.originalname,
+      contentType: req.file.mimetype,
+      sizeBytes: req.file.size,
+      uploadedAt: inserted.rows[0].uploaded_at,
+      uploadedBy: req.user!.name,
+    });
+  }),
+);
+
+router.get(
+  "/subject-files/:id",
+  asyncHandler(async (req, res) => {
+    const fileId = fileIdParam.safeParse(req.params.id);
+    if (!fileId.success) {
+      res.status(400).json({ error: "Invalid request" });
+      return;
+    }
+
+    const { rows } = await pool.query<{ filename: string; content_type: string; data: Buffer }>(
+      "SELECT filename, content_type, data FROM subject_files WHERE id = $1",
+      [fileId.data],
+    );
+    const file = rows[0];
+    if (!file) {
+      res.status(404).json({ error: "File not found" });
+      return;
+    }
+    res.setHeader("Content-Type", file.content_type);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="download"; filename*=UTF-8''${encodeURIComponent(file.filename)}`,
+    );
+    res.send(file.data);
+  }),
+);
+
+router.delete(
+  "/subject-files/:id",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const fileId = fileIdParam.safeParse(req.params.id);
+    if (!fileId.success) {
+      res.status(400).json({ error: "Invalid request" });
+      return;
+    }
+
+    const deleted = await pool.query("DELETE FROM subject_files WHERE id = $1 RETURNING id", [fileId.data]);
+    if (deleted.rows.length === 0) {
+      res.status(404).json({ error: "File not found" });
+      return;
+    }
+    res.status(204).end();
   }),
 );
 

@@ -10,6 +10,8 @@ export interface CurrentUser {
   languageGroup: LanguageGroup | null;
   geometryGroup: GeometryGroup | null;
   canCreatePlans: boolean;
+  /** Junior-admin: may delete homework in their own foreign-language/descriptive-geometry subgroup only — see routes/homework.ts DELETE /occurrences. */
+  groupAdmin: boolean;
 }
 
 declare global {
@@ -37,7 +39,7 @@ export const currentUser = asyncHandler(async (req, res, next) => {
 
   const { rows } = await pool.query<CurrentUser>(
     `SELECT id, name, is_admin AS "isAdmin", language_group AS "languageGroup", geometry_group AS "geometryGroup",
-            can_create_plans AS "canCreatePlans"
+            can_create_plans AS "canCreatePlans", group_admin AS "groupAdmin"
      FROM users WHERE id = $1`,
     [userId],
   );

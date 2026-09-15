@@ -3,13 +3,16 @@ import type {
   BmstuGroupMatch,
   GeometryGroup,
   HomeworkFileMeta,
+  HomeworkKind,
   LanguageGroup,
+  LessonEventType,
   PersonalPlan,
   ScheduleOccurrence,
   Semester,
   StorageUsage,
   SubjectHomeworkEntry,
   SyncRun,
+  UpcomingEvent,
   User,
 } from "../types/schedule";
 
@@ -77,6 +80,12 @@ export interface AuthResponse {
   user: User;
 }
 
+/** Returned instead of `AuthResponse` when the new account still needs an admin's approval before it can log in. */
+export interface RegisterPendingResponse {
+  pending: true;
+  message: string;
+}
+
 export const api = {
   register: (
     name: string,
@@ -84,7 +93,7 @@ export const api = {
     languageGroup: LanguageGroup,
     geometryGroup: GeometryGroup,
   ) =>
-    request<AuthResponse>("/api/auth/register", {
+    request<AuthResponse | RegisterPendingResponse>("/api/auth/register", {
       method: "POST",
       body: JSON.stringify({ name, password, languageGroup, geometryGroup }),
     }),
@@ -96,9 +105,15 @@ export const api = {
       method: "PUT",
       body: JSON.stringify({ languageGroup, geometryGroup }),
     }),
+  updateMyPassword: (currentPassword: string, newPassword: string) =>
+    request<void>("/api/auth/me/password", {
+      method: "PUT",
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
 
   getUsers: () => request<User[]>("/api/users"),
   getSubjects: () => request<string[]>("/api/subjects"),
+  getModularPendingSubjects: () => request<string[]>("/api/subjects/modular-pending"),
 
   getSchedule: (from: string, to: string) => request<ScheduleOccurrence[]>(`/api/schedule?from=${from}&to=${to}`),
 
@@ -111,10 +126,10 @@ export const api = {
   getNextOccurrence: (templateId: number, after: string) =>
     request<ScheduleOccurrence>(`/api/occurrences/${templateId}/next?after=${after}`),
 
-  updateComment: (templateId: number, date: string, comment: string, dueDate: string | null) =>
+  updateComment: (templateId: number, date: string, comment: string, dueDate: string | null, kind?: HomeworkKind) =>
     request(`/api/occurrences/${templateId}/${date}/comment`, {
       method: "PUT",
-      body: JSON.stringify({ comment, dueDate }),
+      body: JSON.stringify({ comment, dueDate, kind }),
     }),
 
   updateDone: (templateId: number, date: string, done: boolean) =>
@@ -122,6 +137,14 @@ export const api = {
       method: "PUT",
       body: JSON.stringify({ done }),
     }),
+
+  setOccurrenceEvent: (templateId: number, date: string, eventType: LessonEventType | null) =>
+    request<void>(`/api/occurrences/${templateId}/${date}/event`, {
+      method: "PUT",
+      body: JSON.stringify({ eventType }),
+    }),
+
+  getUpcomingEvents: () => request<UpcomingEvent[]>("/api/events/upcoming"),
 
   deleteHomework: (templateId: number, date: string) =>
     request<void>(`/api/occurrences/${templateId}/${date}`, { method: "DELETE" }),
@@ -146,6 +169,26 @@ export const api = {
 
   getSubjectHomework: (subject: string) =>
     request<SubjectHomeworkEntry[]>(`/api/subjects/${encodeURIComponent(subject)}/homework`),
+
+  getSubjectFiles: (subject: string) =>
+    request<HomeworkFileMeta[]>(`/api/subjects/${encodeURIComponent(subject)}/files`),
+  uploadSubjectFile: async (subject: string, file: File): Promise<HomeworkFileMeta> => {
+    const body = new FormData();
+    body.append("file", file);
+    const res = await requestBinary(`/api/subjects/${encodeURIComponent(subject)}/files`, { method: "POST", body });
+    return (await res.json()) as HomeworkFileMeta;
+  },
+  deleteSubjectFile: (fileId: number) => request<void>(`/api/subject-files/${fileId}`, { method: "DELETE" }),
+  downloadSubjectFile: async (fileId: number, filename: string): Promise<void> => {
+    const res = await requestBinary(`/api/subject-files/${fileId}`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  },
 
   getPlans: (from: string, to: string) => request<PersonalPlan[]>(`/api/plans?from=${from}&to=${to}`),
   createPlan: (date: string, text: string) =>
@@ -186,5 +229,11 @@ export const api = {
       method: "PUT",
       body: JSON.stringify({ canCreatePlans }),
     }),
+  setUserGroupAdmin: (userId: number, groupAdmin: boolean) =>
+    request<AdminUser>(`/api/admin/users/${userId}/group-admin`, {
+      method: "PUT",
+      body: JSON.stringify({ groupAdmin }),
+    }),
+  approveUser: (userId: number) => request<AdminUser>(`/api/admin/users/${userId}/approve`, { method: "PUT" }),
   deleteUser: (userId: number) => request<void>(`/api/admin/users/${userId}`, { method: "DELETE" }),
 };

@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { DayView } from "../components/DayView";
 import { MonthGrid } from "../components/MonthView/MonthGrid";
+import { UpcomingEvents } from "../components/UpcomingEvents";
 import { TwoWeekView } from "../components/WeekView/TwoWeekView";
 import { ViewToggle, type ViewMode } from "../components/ViewToggle";
-import { WeekView } from "../components/WeekView/WeekView";
+import { WeekView, type WeekLayout } from "../components/WeekView/WeekView";
 import { useOverview } from "../hooks/useOverview";
 import {
   addDays,
@@ -28,6 +29,11 @@ const STEP_DAYS: Record<ViewMode, number> = { day: 1, week: 7, twoWeeks: 14, mon
 export function SchedulePage() {
   const [viewMode, setViewMode] = useState<ViewMode>(defaultViewMode);
   const [anchorDate, setAnchorDate] = useState(todayISO());
+  // Only meaningful for week/twoWeeks — "timeline" is today's default
+  // (WeekTimeGrid, lessons aligned to a shared clock-time axis); "list"
+  // stacks each day's lessons top-aligned one after another instead, with
+  // no gap rows for times another day doesn't have.
+  const [weekLayout, setWeekLayout] = useState<WeekLayout>("timeline");
 
   const { from, to } = useMemo(() => {
     if (viewMode === "day") return { from: anchorDate, to: anchorDate };
@@ -58,6 +64,7 @@ export function SchedulePage() {
 
   return (
     <div className="schedule-page">
+      <UpcomingEvents />
       <ViewToggle
         viewMode={viewMode}
         onViewModeChange={setViewMode}
@@ -66,14 +73,40 @@ export function SchedulePage() {
         onToday={handleToday}
         label={label}
       />
+      {(viewMode === "week" || viewMode === "twoWeeks") && (
+        <div className="view-toggle__segmented week-layout-toggle">
+          <button
+            type="button"
+            className={weekLayout === "timeline" ? "active" : ""}
+            onClick={() => setWeekLayout("timeline")}
+          >
+            По времени
+          </button>
+          <button type="button" className={weekLayout === "list" ? "active" : ""} onClick={() => setWeekLayout("list")}>
+            Списком
+          </button>
+        </div>
+      )}
       {viewMode === "day" && (
         <DayView date={anchorDate} occurrences={occurrences} plans={plans} isLoading={isLoading || isFetching} />
       )}
       {viewMode === "week" && (
-        <WeekView anchorDate={anchorDate} occurrences={occurrences} plans={plans} isLoading={isLoading || isFetching} />
+        <WeekView
+          anchorDate={anchorDate}
+          occurrences={occurrences}
+          plans={plans}
+          isLoading={isLoading || isFetching}
+          layout={weekLayout}
+        />
       )}
       {viewMode === "twoWeeks" && (
-        <TwoWeekView anchorDate={anchorDate} occurrences={occurrences} plans={plans} isLoading={isLoading || isFetching} />
+        <TwoWeekView
+          anchorDate={anchorDate}
+          occurrences={occurrences}
+          plans={plans}
+          isLoading={isLoading || isFetching}
+          layout={weekLayout}
+        />
       )}
       {viewMode === "month" && (
         <MonthGrid anchorDate={anchorDate} occurrences={occurrences} plans={plans} isLoading={isLoading || isFetching} />

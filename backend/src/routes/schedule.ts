@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../db/pool.js";
 import { getActiveSemester, resolveSchedule } from "../services/scheduleResolver.js";
+import { subgroupKey } from "../services/subgroup.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 const router = Router();
@@ -24,6 +25,40 @@ router.get(
       [semester.id],
     );
     res.json(rows.map((r) => r.subject_name));
+  }),
+);
+
+interface ModularPendingRow {
+  subject_name: string;
+  lesson_type: string;
+  subgroup: string;
+}
+
+// Subject names that currently have at least one not-yet-done modular
+// homework item (in the viewer's own subgroup slice) — drives the red
+// "unfinished module" highlight on the subject list in the "Предметы" tab.
+router.get(
+  "/subjects/modular-pending",
+  asyncHandler(async (req, res) => {
+    const semester = await getActiveSemester();
+    if (!semester) {
+      res.json([]);
+      return;
+    }
+    const { rows } = await pool.query<ModularPendingRow>(
+      `SELECT lt.subject_name, lt.lesson_type, hi.subgroup
+       FROM homework_items hi
+       JOIN lesson_templates lt ON lt.id = hi.lesson_template_id
+       LEFT JOIN homework_completions hc ON hc.homework_item_id = hi.id AND hc.user_id = $1
+       WHERE lt.semester_id = $2 AND hi.kind = 'modular' AND COALESCE(hc.done, false) = false`,
+      [req.user!.id, semester.id],
+    );
+    const subjects = new Set(
+      rows
+        .filter((r) => r.subgroup === subgroupKey(r.subject_name, r.lesson_type, req.user!))
+        .map((r) => r.subject_name),
+    );
+    res.json([...subjects]);
   }),
 );
 

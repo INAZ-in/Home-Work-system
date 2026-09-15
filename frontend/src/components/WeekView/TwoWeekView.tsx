@@ -1,18 +1,19 @@
 import { useActiveSemester } from "../../hooks/useActiveSemester";
 import type { PersonalPlan, ScheduleOccurrence } from "../../types/schedule";
 import { addDays, formatDayMonth, resolveWeekParity, startOfWeek } from "../../utils/date";
-import { WeekView } from "./WeekView";
+import { WeekView, type WeekLayout } from "./WeekView";
 
 interface Props {
   anchorDate: string;
   occurrences: ScheduleOccurrence[];
   plans?: PersonalPlan[];
   isLoading: boolean;
+  layout?: WeekLayout;
 }
 
 const PARITY_LABEL: Record<"ch" | "zn", string> = { ch: "числитель", zn: "знаменатель" };
 
-export function TwoWeekView({ anchorDate, occurrences, plans = [], isLoading }: Props) {
+export function TwoWeekView({ anchorDate, occurrences, plans = [], isLoading, layout }: Props) {
   const { data: semester } = useActiveSemester();
   const week1Start = startOfWeek(anchorDate);
   const week2Start = addDays(week1Start, 7);
@@ -33,7 +34,7 @@ export function TwoWeekView({ anchorDate, occurrences, plans = [], isLoading }: 
               )}
             </div>
             {/* Loading state is already shown once above, at the two-week level. */}
-            <WeekView anchorDate={weekStart} occurrences={occurrences} plans={plans} isLoading={false} />
+            <WeekView anchorDate={weekStart} occurrences={occurrences} plans={plans} isLoading={false} layout={layout} />
           </div>
         );
       })}

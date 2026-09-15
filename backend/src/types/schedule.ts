@@ -13,6 +13,10 @@ export interface HomeworkFileMeta {
   uploadedBy: string | null;
 }
 
+export type HomeworkKind = "regular" | "modular";
+
+export type LessonEventType = "rk" | "kr" | "module_end" | "rabotka";
+
 export interface OccurrenceHomework {
   id: number;
   comment: string;
@@ -20,6 +24,7 @@ export interface OccurrenceHomework {
   updatedAt: string;
   updatedBy: string | null;
   files: HomeworkFileMeta[];
+  kind: HomeworkKind;
 }
 
 export interface SubjectHomeworkEntry {
@@ -35,6 +40,19 @@ export interface SubjectHomeworkEntry {
   updatedBy: string | null;
   done: boolean;
   files: HomeworkFileMeta[];
+  kind: HomeworkKind;
+  /** Which elective subgroup this entry belongs to, e.g. "немецкий" or "группа 2" — null for subjects the whole group shares. Lets the frontend know when a "group admin" (their own subgroup only) may delete it. */
+  subgroupLabel: string | null;
+}
+
+export interface UpcomingEvent {
+  lessonTemplateId: number;
+  date: string;
+  eventType: LessonEventType;
+  subject: string;
+  type: string;
+  teacher: string;
+  room: string;
 }
 
 export interface PersonalPlan {
@@ -58,4 +76,6 @@ export interface ScheduleOccurrence {
   done: boolean;
   /** Which elective subgroup's homework this is, e.g. "немецкий" or "группа 2" — null for subjects the whole group shares, or when the viewer hasn't answered the matching profile question yet. */
   subgroupLabel: string | null;
+  /** Admin-set marker for this specific occurrence (РК/КР/Конец модуля/Работка) — null when none is set. */
+  event: LessonEventType | null;
 }

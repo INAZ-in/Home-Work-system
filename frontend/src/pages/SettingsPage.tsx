@@ -27,6 +27,22 @@ export function SettingsPage() {
     if (languageGroup && geometryGroup) mutation.mutate();
   };
 
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+
+  const passwordMutation = useMutation({
+    mutationFn: () => api.updateMyPassword(currentPassword, newPassword),
+    onSuccess: () => {
+      setCurrentPassword("");
+      setNewPassword("");
+    },
+  });
+
+  const handleSubmitPassword = (e: FormEvent): void => {
+    e.preventDefault();
+    if (currentPassword && newPassword) passwordMutation.mutate();
+  };
+
   return (
     <div className="admin-page">
       <section className="admin-section">
@@ -70,6 +86,38 @@ export function SettingsPage() {
           {mutation.isSuccess && <p className="admin-form__hint">Сохранено.</p>}
           <button type="submit" disabled={mutation.isPending}>
             Сохранить
+          </button>
+        </form>
+      </section>
+
+      <section className="admin-section">
+        <h2>Пароль</h2>
+        <form className="admin-form" onSubmit={handleSubmitPassword}>
+          <label>
+            Текущий пароль
+            <input
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              autoComplete="current-password"
+              required
+            />
+          </label>
+          <label>
+            Новый пароль
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              autoComplete="new-password"
+              minLength={6}
+              required
+            />
+          </label>
+          {passwordMutation.isError && <p className="form-error">{(passwordMutation.error as Error).message}</p>}
+          {passwordMutation.isSuccess && <p className="admin-form__hint">Пароль изменён.</p>}
+          <button type="submit" disabled={passwordMutation.isPending}>
+            Сменить пароль
           </button>
         </form>
       </section>

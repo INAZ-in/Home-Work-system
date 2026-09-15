@@ -114,9 +114,12 @@ function addMinutes(time: string, minutes: number): string {
   return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 }
 
-// Matches e.g. "ФКиС 09:25 Измайлово" — LKS has no field for a lesson's real
-// time when it differs from its nominal pair slot, so it gets written into
-// the subject text instead. Only ФКиС is known to do this.
+// Matches e.g. "ФКиС 09:25 Измайлово" — for at least this one subject, LKS's
+// own startTime/endTime fields carry the *nominal* pair-slot time rather
+// than the real one, so the deviation only shows up as a remark in the
+// subject text. Checked first, below, as it's more specific than the
+// startTime-based fallback and doesn't depend on comparing against other
+// lessons in the same pair.
 const SUBJECT_TIME_OVERRIDE = /^ФКиС\s+(\d{1,2}:\d{2})\b/;
 
 function extractTimeOverride(subject: string): { startTimeOverride: string; endTimeOverride: string } | null {
@@ -124,6 +127,64 @@ function extractTimeOverride(subject: string): { startTimeOverride: string; endT
   if (!match) return null;
   const startTimeOverride = match[1].padStart(5, "0");
   return { startTimeOverride, endTimeOverride: addMinutes(startTimeOverride, LESSON_DURATION_MINUTES) };
+}
+
+/**
+ * The most common {start,end} LKS reports for each pair number — used as
+ * that pair's canonical slot time (see `pairs` table) instead of naively
+ * trusting whichever lesson happened to come first in the API response,
+ * which could pick an oddball lesson's time as "the" pair-3 time for
+ * everyone. Robust as long as a real time deviation (like Введение в
+ * специальность actually starting at 12:25 while every other pair-3 lesson
+ * starts at 12:15) is the minority case for that pair, which it always is.
+ */
+function canonicalPairTimes(lessons: NormalizedLesson[]): Map<number, { start: string; end: string }> {
+  const countsByPair = new Map<number, Map<string, number>>();
+  for (const l of lessons) {
+    if (!l.startTime || !l.endTime) continue;
+    const counts = countsByPair.get(l.pair) ?? new Map<string, number>();
+    const key = `${l.startTime}|${l.endTime}`;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+    countsByPair.set(l.pair, counts);
+  }
+  const result = new Map<number, { start: string; end: string }>();
+  for (const [pairNum, counts] of countsByPair) {
+    let bestKey: string | null = null;
+    let bestCount = 0;
+    for (const [key, count] of counts) {
+      if (count > bestCount) {
+        bestKey = key;
+        bestCount = count;
+      }
+    }
+    if (bestKey) {
+      const [start, end] = bestKey.split("|");
+      result.set(pairNum, { start, end });
+    }
+  }
+  return result;
+}
+
+/**
+ * Any lesson whose own LKS startTime/endTime don't match its pair's
+ * canonical time (see canonicalPairTimes above) gets those exact times as
+ * its override — the general form of the ФКиС text-parsing case above, but
+ * driven by LKS's actual per-lesson time fields instead of a hand-maintained
+ * regex, so a *new* subject that quietly starts at a different time (like
+ * Введение в специальность really starting at 12:25, not pair 3's nominal
+ * 12:15) is picked up automatically on the next sync.
+ */
+function applyStartTimeDeviations(lessons: NormalizedLesson[], canonical: Map<number, { start: string; end: string }>): void {
+  for (const l of lessons) {
+    if (l.startTimeOverride) continue; // text-based override already found
+    if (!l.startTime || !l.endTime) continue;
+    const pairCanonical = canonical.get(l.pair);
+    if (!pairCanonical) continue;
+    if (l.startTime !== pairCanonical.start || l.endTime !== pairCanonical.end) {
+      l.startTimeOverride = l.startTime;
+      l.endTimeOverride = l.endTime;
+    }
+  }
 }
 
 function normalizeLessonType(raw: string | undefined): LessonType {
@@ -230,12 +291,8 @@ export async function runScheduleSync(): Promise<SyncResult> {
       .filter((l) => l.day >= 1 && l.day <= 6)
       .map(normalizeLesson);
 
-    const pairTimes = new Map<number, { start: string; end: string }>();
-    for (const l of liveLessons) {
-      if (l.startTime && l.endTime && !pairTimes.has(l.pair)) {
-        pairTimes.set(l.pair, { start: l.startTime, end: l.endTime });
-      }
-    }
+    const pairTimes = canonicalPairTimes(liveLessons);
+    applyStartTimeDeviations(liveLessons, pairTimes);
 
     const dbTemplatesRes = await client.query<DbTemplateRow>(
       `SELECT id, day_of_week, pair_num, week_parity, subject_name, lesson_type, teacher, room,

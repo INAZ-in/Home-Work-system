@@ -191,6 +191,16 @@ h3 {
   text-align: left;
 }
 
+.auth-form__back-button {
+  margin-top: 14px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: none;
+  border-radius: 6px;
+  padding: 9px 14px;
+  font-weight: 600;
+}
+
 /* --- app shell --- */
 
 .app {
@@ -301,6 +311,58 @@ h3 {
   margin: 0 auto;
 }
 
+.upcoming-events {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.upcoming-events__title {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.upcoming-events__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.upcoming-events__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+.upcoming-events__date {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.upcoming-events__subject {
+  font-weight: 600;
+}
+
+.upcoming-events__badge {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: var(--accent-ink);
+}
+
 .loading-banner {
   color: var(--muted);
   font-size: 12.5px;
@@ -364,6 +426,10 @@ h3 {
     padding: 6px 9px;
     font-size: 12.5px;
   }
+}
+
+.week-layout-toggle {
+  margin-bottom: 14px;
 }
 
 /* --- week view --- */
@@ -566,12 +632,80 @@ h3 {
   color: var(--muted);
 }
 
+.lesson-card__event {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--danger);
+}
+
 .lesson-card__hw-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: var(--today);
   margin-left: auto;
+}
+
+.lesson-event-menu {
+  position: relative;
+  margin-left: auto;
+}
+
+.lesson-event-menu__trigger {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 4px;
+}
+
+.lesson-event-menu__trigger:hover {
+  color: var(--ink);
+}
+
+.lesson-event-menu__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.lesson-event-menu__dropdown {
+  position: fixed;
+  z-index: 41;
+  transform: translateX(-100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 150px;
+}
+
+.lesson-event-menu__dropdown button {
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12.5px;
+  color: var(--ink);
+}
+
+.lesson-event-menu__dropdown button.active {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.lesson-event-menu__dropdown button.lesson-event-menu__clear {
+  color: var(--danger);
+  border-top: 1px solid var(--border);
+  margin-top: 2px;
+  padding-top: 8px;
 }
 
 .lesson-card__meta {
@@ -597,17 +731,72 @@ h3 {
   gap: 6px;
 }
 
-.hw-editor__done {
+.hw-editor__done,
+.hw-editor__modular {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 12.5px;
 }
 
-.hw-editor__comment {
-  resize: vertical;
+.collapsible-textarea {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+}
+
+.collapsible-textarea__toggle {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1;
+  padding: 4px 2px;
+  transition: transform 0.15s ease;
+}
+
+.collapsible-textarea__toggle--open {
+  transform: rotate(90deg);
+}
+
+.collapsible-textarea__preview {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 0;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.collapsible-textarea__preview--placeholder {
+  color: var(--muted);
+}
+
+.collapsible-textarea__field {
+  flex: 1;
+  min-width: 0;
+  resize: none;
+  overflow: hidden;
   width: 100%;
   font-size: 13px;
+}
+
+.collapsible-textarea__readonly {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: var(--muted);
 }
 
 .hw-editor__actions {
@@ -912,6 +1101,15 @@ h3 {
   flex-shrink: 0;
 }
 
+.semester-list__actions button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: var(--ink);
+}
+
 .semester-list__uuid {
   color: var(--muted);
   font-size: 11.5px;
@@ -950,6 +1148,14 @@ h3 {
 
 .admin-form__group-search-row input {
   flex: 1;
+}
+
+.admin-form__group-search-row button {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  color: var(--ink);
 }
 
 .admin-form__group-matches {
@@ -1051,6 +1257,15 @@ h3 {
   color: var(--ink);
 }
 
+.user-table__plans-toggle {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: var(--ink);
+}
+
 .user-table__delete,
 .semester-list__delete {
   color: var(--danger);
@@ -1073,6 +1288,18 @@ h3 {
 .user-admin-list__you {
   color: var(--muted);
   font-weight: 400;
+}
+
+.user-admin-list__pending {
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: var(--accent-ink);
 }
 
 @media (max-width: 700px) {
@@ -1165,6 +1392,11 @@ h3 {
 .subjects-page__list button.active {
   background: var(--accent);
   color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.subjects-page__list button.subjects-page__list-item--modular-pending {
+  color: var(--danger);
   font-weight: 600;
 }
 
@@ -1308,6 +1540,47 @@ h3 {
 
 .hw-files__add-btn:hover {
   color: var(--today);
+}
+
+/* --- subject files --- */
+
+.subject-files {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+
+.subject-files__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.subject-files__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.subject-files__item:last-child {
+  border-bottom: none;
+}
+
+.subject-files__meta {
+  color: var(--muted);
+  font-size: 11px;
+  margin-left: auto;
 }
 
 /* --- personal plans --- */
