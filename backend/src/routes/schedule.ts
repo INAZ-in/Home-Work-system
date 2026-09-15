@@ -62,6 +62,43 @@ router.get(
   }),
 );
 
+interface PendingRow {
+  subject_name: string;
+  lesson_type: string;
+  subgroup: string;
+}
+
+// Subject names that currently have at least one not-yet-done homework item
+// of any kind (in the viewer's own subgroup slice) — drives the plain
+// "unfinished homework" dot next to the subject name in the "Предметы" tab
+// (separate from /subjects/modular-pending's red-text highlight, which is
+// specifically about modular items).
+router.get(
+  "/subjects/pending",
+  asyncHandler(async (req, res) => {
+    const semester = await getActiveSemester();
+    if (!semester) {
+      res.json([]);
+      return;
+    }
+    const { rows } = await pool.query<PendingRow>(
+      `SELECT lt.subject_name, lt.lesson_type, hi.subgroup
+       FROM homework_items hi
+       JOIN lesson_templates lt ON lt.id = hi.lesson_template_id
+       LEFT JOIN homework_completions hc ON hc.homework_item_id = hi.id AND hc.user_id = $1
+       WHERE lt.semester_id = $2 AND COALESCE(hc.done, false) = false
+         AND (hi.comment <> '' OR EXISTS (SELECT 1 FROM homework_files hf WHERE hf.homework_item_id = hi.id))`,
+      [req.user!.id, semester.id],
+    );
+    const subjects = new Set(
+      rows
+        .filter((r) => r.subgroup === subgroupKey(r.subject_name, r.lesson_type, req.user!))
+        .map((r) => r.subject_name),
+    );
+    res.json([...subjects]);
+  }),
+);
+
 const querySchema = z.object({
   from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),

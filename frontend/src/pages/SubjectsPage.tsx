@@ -12,6 +12,10 @@ export function SubjectsPage() {
     queryKey: ["subjects-modular-pending"],
     queryFn: api.getModularPendingSubjects,
   });
+  const { data: pending = [] } = useQuery({
+    queryKey: ["subjects-pending"],
+    queryFn: api.getPendingSubjects,
+  });
   const [selected, setSelected] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("upcoming");
 
@@ -38,7 +42,8 @@ export function SubjectsPage() {
             className={`${selected === s ? "active" : ""}${modularPending.includes(s) ? " subjects-page__list-item--modular-pending" : ""}`}
             onClick={() => setSelected(s)}
           >
-            {s}
+            <span>{s}</span>
+            {pending.includes(s) && <span className="subjects-page__pending-dot" title="Есть невыполненное дз" />}
           </button>
         ))}
         {subjects.length === 0 && <p className="subjects-page__empty">Предметов пока нет.</p>}

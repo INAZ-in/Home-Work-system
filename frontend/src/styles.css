@@ -1380,6 +1380,10 @@ h3 {
 }
 
 .subjects-page__list button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   text-align: left;
   background: none;
   border: none;
@@ -1387,6 +1391,14 @@ h3 {
   padding: 8px 10px;
   color: var(--ink);
   font-size: 13px;
+}
+
+.subjects-page__pending-dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--today);
 }
 
 .subjects-page__list button.active {

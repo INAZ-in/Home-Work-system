@@ -29,6 +29,7 @@ export function SubjectHomeworkCard({ subject, entry }: Props) {
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["subject-homework", subject] });
     queryClient.invalidateQueries({ queryKey: ["subjects-modular-pending"] });
+    queryClient.invalidateQueries({ queryKey: ["subjects-pending"] });
   };
 
   const commentMutation = useMutation({

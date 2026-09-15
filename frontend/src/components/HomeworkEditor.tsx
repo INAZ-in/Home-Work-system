@@ -30,30 +30,27 @@ export function HomeworkEditor({ occurrence }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedComment, savedKind, occurrence.done]);
 
+  const invalidatePendingQueries = (): void => {
+    queryClient.invalidateQueries({ queryKey: ["overview"] });
+    queryClient.invalidateQueries({ queryKey: ["subjects-modular-pending"] });
+    queryClient.invalidateQueries({ queryKey: ["subjects-pending"] });
+  };
+
   const commentMutation = useMutation({
     mutationFn: ({ value, kindValue }: { value: string; kindValue: HomeworkKind }) =>
       api.updateComment(occurrence.lessonTemplateId, occurrence.date, value, null, kindValue),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["overview"] });
-      queryClient.invalidateQueries({ queryKey: ["subjects-modular-pending"] });
-    },
+    onSuccess: invalidatePendingQueries,
   });
 
   const doneMutation = useMutation({
     mutationFn: (value: boolean) => api.updateDone(occurrence.lessonTemplateId, occurrence.date, value),
     onError: () => setDone(occurrence.done),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["overview"] });
-      queryClient.invalidateQueries({ queryKey: ["subjects-modular-pending"] });
-    },
+    onSuccess: invalidatePendingQueries,
   });
 
   const deleteMutation = useMutation({
     mutationFn: () => api.deleteHomework(occurrence.lessonTemplateId, occurrence.date),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["overview"] });
-      queryClient.invalidateQueries({ queryKey: ["subjects-modular-pending"] });
-    },
+    onSuccess: invalidatePendingQueries,
   });
 
   const handleToggleDone = (): void => {
@@ -145,7 +142,7 @@ export function HomeworkEditor({ occurrence }: Props) {
         templateId={occurrence.lessonTemplateId}
         date={occurrence.date}
         files={occurrence.homework?.files ?? []}
-        onChanged={() => queryClient.invalidateQueries({ queryKey: ["overview"] })}
+        onChanged={invalidatePendingQueries}
         canDelete={Boolean(canDelete)}
       />
       {occurrence.homework?.updatedBy && <div className="hw-editor__meta">изменил(а) {occurrence.homework.updatedBy}</div>}

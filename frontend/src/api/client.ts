@@ -114,6 +114,7 @@ export const api = {
   getUsers: () => request<User[]>("/api/users"),
   getSubjects: () => request<string[]>("/api/subjects"),
   getModularPendingSubjects: () => request<string[]>("/api/subjects/modular-pending"),
+  getPendingSubjects: () => request<string[]>("/api/subjects/pending"),
 
   getSchedule: (from: string, to: string) => request<ScheduleOccurrence[]>(`/api/schedule?from=${from}&to=${to}`),
 
