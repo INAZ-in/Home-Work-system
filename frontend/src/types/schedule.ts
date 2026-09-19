@@ -78,7 +78,7 @@ export interface UpcomingEvent {
   room: string;
 }
 
-export type LanguageGroup = "en_strong" | "en_weak" | "de" | "es";
+export type LanguageGroup = "en_strong" | "en_weak" | "de" | "es" | "zh";
 export type GeometryGroup = 1 | 2;
 
 export const LANGUAGE_GROUP_LABELS: Record<LanguageGroup, string> = {
@@ -86,6 +86,7 @@ export const LANGUAGE_GROUP_LABELS: Record<LanguageGroup, string> = {
   en_weak: "Английский (слабая группа)",
   de: "Немецкий",
   es: "Испанский",
+  zh: "Китайский",
 };
 
 export const GEOMETRY_GROUP_LABELS: Record<GeometryGroup, string> = {

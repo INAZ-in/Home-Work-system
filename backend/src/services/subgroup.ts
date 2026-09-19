@@ -1,7 +1,7 @@
-export type LanguageGroup = "en_strong" | "en_weak" | "de" | "es";
+export type LanguageGroup = "en_strong" | "en_weak" | "de" | "es" | "zh";
 export type GeometryGroup = 1 | 2;
 
-export const LANGUAGE_GROUPS: readonly LanguageGroup[] = ["en_strong", "en_weak", "de", "es"];
+export const LANGUAGE_GROUPS: readonly LanguageGroup[] = ["en_strong", "en_weak", "de", "es", "zh"];
 export const GEOMETRY_GROUPS: readonly GeometryGroup[] = [1, 2];
 
 export interface UserSubgroups {
@@ -58,6 +58,7 @@ const LANGUAGE_SHORT_LABELS: Record<LanguageGroup, string> = {
   en_weak: "англ., слабая",
   de: "немецкий",
   es: "испанский",
+  zh: "китайский",
 };
 
 /** Short label to show next to a split session so it's clear whose homework is displayed, or null when the session isn't split (or the user hasn't answered the matching profile question yet). */
