@@ -20,7 +20,16 @@ const fileIdParam = z.coerce.number().int().positive();
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_FILE_SIZE } });
 
-/** Wraps multer's single-file middleware so a too-large/malformed upload comes back as a normal 400 instead of falling through to the generic 500 handler. */
+/**
+ * Wraps multer's single-file middleware so a too-large/malformed upload
+ * comes back as a normal 400 instead of falling through to the generic 500
+ * handler, and repairs the uploaded filename's encoding.
+ *
+ * multipart/form-data has no way to declare a charset for the `filename`
+ * field, so busboy (which multer uses) decodes it as Latin-1 — every
+ * browser actually sends it as UTF-8, so a non-ASCII name (Cyrillic, etc.)
+ * comes out as mojibake unless we redecode it here.
+ */
 function uploadSingleFile(req: Request, res: Response, next: NextFunction): void {
   upload.single("file")(req, res, (err: unknown) => {
     if (err) {
@@ -30,6 +39,9 @@ function uploadSingleFile(req: Request, res: Response, next: NextFunction): void
           : "Не удалось загрузить файл";
       res.status(400).json({ error: message });
       return;
+    }
+    if (req.file) {
+      req.file.originalname = Buffer.from(req.file.originalname, "latin1").toString("utf8");
     }
     next();
   });
