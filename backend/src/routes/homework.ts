@@ -17,7 +17,7 @@ const dateParam = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const templateIdParam = z.coerce.number().int().positive();
 const fileIdParam = z.coerce.number().int().positive();
 
-const MAX_FILE_SIZE = 15 * 1024 * 1024;
+const MAX_FILE_SIZE = 300 * 1024 * 1024;
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_FILE_SIZE } });
 
 /**
@@ -35,7 +35,7 @@ function uploadSingleFile(req: Request, res: Response, next: NextFunction): void
     if (err) {
       const message =
         err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE"
-          ? "Файл слишком большой (максимум 15 МБ)"
+          ? "Файл слишком большой (максимум 300 МБ)"
           : "Не удалось загрузить файл";
       res.status(400).json({ error: message });
       return;
@@ -443,7 +443,7 @@ router.post(
       if (usage.usedBytes + req.file.size > MAX_TOTAL_STORAGE_BYTES) {
         await client.query("ROLLBACK");
         res.status(507).json({
-          error: "Общий объём загруженных файлов достиг лимита (2 ГБ) — загрузка новых файлов отключена",
+          error: "Общий объём загруженных файлов достиг лимита (5 ГБ) — загрузка новых файлов отключена",
         });
         return;
       }
@@ -706,7 +706,7 @@ router.post(
     const usage = await getStorageUsage();
     if (usage.usedBytes + req.file.size > MAX_TOTAL_STORAGE_BYTES) {
       res.status(507).json({
-        error: "Общий объём загруженных файлов достиг лимита (2 ГБ) — загрузка новых файлов отключена",
+        error: "Общий объём загруженных файлов достиг лимита (5 ГБ) — загрузка новых файлов отключена",
       });
       return;
     }

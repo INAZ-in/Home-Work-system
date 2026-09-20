@@ -6,7 +6,7 @@ import type { HomeworkFileMeta } from "../types/schedule.js";
 // homework_files + subject_files row across the whole app. Once a new
 // upload would push the total past this, uploads are refused until
 // something is deleted.
-export const MAX_TOTAL_STORAGE_BYTES = 2 * 1024 * 1024 * 1024;
+export const MAX_TOTAL_STORAGE_BYTES = 5 * 1024 * 1024 * 1024;
 
 export interface StorageUsage {
   usedBytes: number;
