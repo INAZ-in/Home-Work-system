@@ -1,5 +1,6 @@
 import type {
   AdminUser,
+  BirthdayEntry,
   BmstuGroupMatch,
   GeometryGroup,
   HomeworkFileMeta,
@@ -112,6 +113,7 @@ export const api = {
     }),
 
   getUsers: () => request<User[]>("/api/users"),
+  getBirthdays: () => request<BirthdayEntry[]>("/api/birthdays"),
   getSubjects: () => request<string[]>("/api/subjects"),
   getModularPendingSubjects: () => request<string[]>("/api/subjects/modular-pending"),
   getPendingSubjects: () => request<string[]>("/api/subjects/pending"),
@@ -236,5 +238,7 @@ export const api = {
       body: JSON.stringify({ groupAdmin }),
     }),
   approveUser: (userId: number) => request<AdminUser>(`/api/admin/users/${userId}/approve`, { method: "PUT" }),
+  setUserBirthDate: (userId: number, birthDate: string | null) =>
+    request<AdminUser>(`/api/admin/users/${userId}/birth-date`, { method: "PUT", body: JSON.stringify({ birthDate }) }),
   deleteUser: (userId: number) => request<void>(`/api/admin/users/${userId}`, { method: "DELETE" }),
 };

@@ -4,6 +4,7 @@ import { currentUser } from "./middleware/currentUser.js";
 import { requireAdmin } from "./middleware/requireAdmin.js";
 import adminRouter from "./routes/admin.js";
 import authRouter from "./routes/auth.js";
+import birthdaysRouter from "./routes/birthdays.js";
 import homeworkRouter from "./routes/homework.js";
 import overviewRouter from "./routes/overview.js";
 import plansRouter from "./routes/plans.js";
@@ -28,6 +29,7 @@ export function createApp(): Express {
   app.use("/api/auth", authRouter);
 
   app.use("/api/users", currentUser, usersRouter);
+  app.use("/api/birthdays", currentUser, birthdaysRouter);
   app.use("/api", currentUser, scheduleRouter);
   app.use("/api", currentUser, homeworkRouter);
   app.use("/api", currentUser, overviewRouter);

@@ -2,13 +2,14 @@ import { useState } from "react";
 import { useUser } from "./context/UserContext";
 import { useSubjectColors } from "./hooks/useSubjectColors";
 import { AdminPage } from "./pages/AdminPage";
+import { BirthdaysPage } from "./pages/BirthdaysPage";
 import { LoginPage } from "./pages/LoginPage";
 import { PlansPage } from "./pages/PlansPage";
 import { SchedulePage } from "./pages/SchedulePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { SubjectsPage } from "./pages/SubjectsPage";
 
-type Page = "schedule" | "subjects" | "plans" | "admin" | "settings";
+type Page = "schedule" | "subjects" | "birthdays" | "plans" | "admin" | "settings";
 
 export function App() {
   const { currentUser, isRestoring, logout } = useUser();
@@ -22,6 +23,7 @@ export function App() {
   const showAdmin = page === "admin" && currentUser.isAdmin;
   const showSettings = page === "settings" || profileIncomplete;
   const showSubjects = page === "subjects" && !showSettings;
+  const showBirthdays = page === "birthdays" && !showSettings;
   const showPlans = page === "plans" && currentUser.canCreatePlans && !showSettings;
 
   return (
@@ -34,6 +36,9 @@ export function App() {
           </button>
           <button type="button" className={page === "subjects" ? "active" : ""} onClick={() => setPage("subjects")}>
             Предметы
+          </button>
+          <button type="button" className={page === "birthdays" ? "active" : ""} onClick={() => setPage("birthdays")}>
+            Дни рождения
           </button>
           {currentUser.canCreatePlans && (
             <button type="button" className={page === "plans" ? "active" : ""} onClick={() => setPage("plans")}>
@@ -71,6 +76,8 @@ export function App() {
           <AdminPage />
         ) : showSubjects ? (
           <SubjectsPage />
+        ) : showBirthdays ? (
+          <BirthdaysPage />
         ) : showPlans ? (
           <PlansPage />
         ) : (

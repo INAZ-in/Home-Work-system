@@ -118,6 +118,14 @@ export interface AdminUser extends User {
   createdAt: string;
   lastLoginAt: string | null;
   approved: boolean;
+  birthDate: string | null;
+}
+
+export interface BirthdayEntry {
+  id: number;
+  name: string;
+  birthDate: string;
+  daysUntil: number;
 }
 
 export interface Semester {

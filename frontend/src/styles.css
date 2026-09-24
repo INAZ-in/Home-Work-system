@@ -1309,6 +1309,10 @@ h3 {
   }
 }
 
+.birthdays-page__row--soon td:first-child {
+  box-shadow: inset 3px 0 0 var(--danger);
+}
+
 /* --- sync log --- */
 
 .sync-log {

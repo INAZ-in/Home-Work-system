@@ -64,7 +64,7 @@ router.get(
       `SELECT id, name, is_admin AS "isAdmin", created_at AS "createdAt",
               language_group AS "languageGroup", geometry_group AS "geometryGroup",
               can_create_plans AS "canCreatePlans", group_admin AS "groupAdmin",
-              last_login_at AS "lastLoginAt", approved
+              last_login_at AS "lastLoginAt", approved, birth_date AS "birthDate"
        FROM users ORDER BY approved, name`,
     );
     res.json(rows);
@@ -267,6 +267,34 @@ router.put(
                  language_group AS "languageGroup", geometry_group AS "geometryGroup",
                  can_create_plans AS "canCreatePlans", group_admin AS "groupAdmin"`,
       [parsed.data.groupAdmin, id],
+    );
+    if (updated.rows.length === 0) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    res.json(updated.rows[0]);
+  }),
+);
+
+const setBirthDateSchema = z.object({ birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable() });
+
+router.put(
+  "/users/:id/birth-date",
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    const parsed = setBirthDateSchema.safeParse(req.body);
+    if (!Number.isInteger(id) || id <= 0 || !parsed.success) {
+      res.status(400).json({ error: "Invalid request" });
+      return;
+    }
+
+    const updated = await pool.query(
+      `UPDATE users SET birth_date = $1 WHERE id = $2
+       RETURNING id, name, is_admin AS "isAdmin", created_at AS "createdAt",
+                 language_group AS "languageGroup", geometry_group AS "geometryGroup",
+                 can_create_plans AS "canCreatePlans", group_admin AS "groupAdmin",
+                 birth_date AS "birthDate"`,
+      [parsed.data.birthDate, id],
     );
     if (updated.rows.length === 0) {
       res.status(404).json({ error: "User not found" });

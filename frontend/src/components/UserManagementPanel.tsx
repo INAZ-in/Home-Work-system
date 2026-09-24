@@ -26,6 +26,9 @@ export function UserManagementPanel() {
   const [editLanguageGroup, setEditLanguageGroup] = useState<LanguageGroup | "">("");
   const [editGeometryGroup, setEditGeometryGroup] = useState<GeometryGroup | "">("");
 
+  const [birthDateEditId, setBirthDateEditId] = useState<number | null>(null);
+  const [editBirthDate, setEditBirthDate] = useState("");
+
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-users"] });
 
   const createMutation = useMutation({
@@ -77,6 +80,14 @@ export function UserManagementPanel() {
     onSuccess: invalidate,
   });
 
+  const setBirthDateMutation = useMutation({
+    mutationFn: ({ id, birthDate }: { id: number; birthDate: string | null }) => api.setUserBirthDate(id, birthDate),
+    onSuccess: () => {
+      setBirthDateEditId(null);
+      invalidate();
+    },
+  });
+
   const approveMutation = useMutation({
     mutationFn: (id: number) => api.approveUser(id),
     onSuccess: invalidate,
@@ -99,6 +110,11 @@ export function UserManagementPanel() {
     }
   };
 
+  const handleSaveBirthDate = (e: FormEvent, id: number): void => {
+    e.preventDefault();
+    setBirthDateMutation.mutate({ id, birthDate: editBirthDate || null });
+  };
+
   const handleDelete = (id: number, userName: string): void => {
     if (window.confirm(`Удалить пользователя «${userName}»? Это необратимо.`)) {
       deleteMutation.mutate(id);
@@ -116,6 +132,7 @@ export function UserManagementPanel() {
               <th>Последний вход</th>
               <th>Роль</th>
               <th>Группы</th>
+              <th>Дата рождения</th>
               <th>Личные планы</th>
               <th>Модерация групп</th>
               <th></th>
@@ -124,12 +141,12 @@ export function UserManagementPanel() {
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={8}>Загрузка…</td>
+                <td colSpan={9}>Загрузка…</td>
               </tr>
             )}
             {!isLoading && users.length === 0 && (
               <tr>
-                <td colSpan={8}>Пользователей пока нет.</td>
+                <td colSpan={9}>Пользователей пока нет.</td>
               </tr>
             )}
             {users.map((u) => (
@@ -151,6 +168,7 @@ export function UserManagementPanel() {
                     <br />
                     {u.geometryGroup ? GEOMETRY_GROUP_LABELS[u.geometryGroup] : "—"}
                   </td>
+                  <td>{u.birthDate ? formatDayMonth(u.birthDate) : "—"}</td>
                   <td>
                     <button
                       type="button"
@@ -212,6 +230,15 @@ export function UserManagementPanel() {
                     >
                       Изменить группы
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBirthDateEditId(birthDateEditId === u.id ? null : u.id);
+                        setEditBirthDate(u.birthDate ?? "");
+                      }}
+                    >
+                      Дата рождения
+                    </button>
                     <button type="button" className="user-table__delete" onClick={() => handleDelete(u.id, u.name)}>
                       Удалить
                     </button>
@@ -219,7 +246,7 @@ export function UserManagementPanel() {
                 </tr>
                 {passwordEditId === u.id && (
                   <tr>
-                    <td colSpan={8}>
+                    <td colSpan={9}>
                       <form className="user-table__password-form" onSubmit={(e) => handleSavePassword(e, u.id)}>
                         <input
                           type="password"
@@ -242,7 +269,7 @@ export function UserManagementPanel() {
                 )}
                 {subgroupsEditId === u.id && (
                   <tr>
-                    <td colSpan={8}>
+                    <td colSpan={9}>
                       <form className="user-table__password-form" onSubmit={(e) => handleSaveSubgroups(e, u.id)}>
                         <select
                           value={editLanguageGroup}
@@ -282,6 +309,26 @@ export function UserManagementPanel() {
                     </td>
                   </tr>
                 )}
+                {birthDateEditId === u.id && (
+                  <tr>
+                    <td colSpan={9}>
+                      <form className="user-table__password-form" onSubmit={(e) => handleSaveBirthDate(e, u.id)}>
+                        <input
+                          type="date"
+                          value={editBirthDate}
+                          onChange={(e) => setEditBirthDate(e.target.value)}
+                          autoFocus
+                        />
+                        <button type="submit" disabled={setBirthDateMutation.isPending}>
+                          Сохранить
+                        </button>
+                        <button type="button" onClick={() => setBirthDateEditId(null)}>
+                          Отмена
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                )}
               </Fragment>
             ))}
           </tbody>
@@ -291,6 +338,7 @@ export function UserManagementPanel() {
       {setAdminMutation.isError && <p className="form-error">{(setAdminMutation.error as Error).message}</p>}
       {setPasswordMutation.isError && <p className="form-error">{(setPasswordMutation.error as Error).message}</p>}
       {setSubgroupsMutation.isError && <p className="form-error">{(setSubgroupsMutation.error as Error).message}</p>}
+      {setBirthDateMutation.isError && <p className="form-error">{(setBirthDateMutation.error as Error).message}</p>}
       {setCanCreatePlansMutation.isError && (
         <p className="form-error">{(setCanCreatePlansMutation.error as Error).message}</p>
       )}
